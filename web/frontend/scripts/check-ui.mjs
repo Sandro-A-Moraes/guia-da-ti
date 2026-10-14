@@ -68,7 +68,7 @@ try {
   await checkStudy({send,evaluate,waitFor,navigate,click,selectOption});
   await checkStudyCuration({catalog,send,evaluate,waitFor,navigate,click});
   await checkUniversityFilter({catalog,send,evaluate,waitFor,navigate,click,selectOption});
-  await checkContributionWizard({send,evaluate,waitFor,navigate,click,selectOption});
+  await checkContributionWizard({send,evaluate,waitFor,navigate,click,selectOption,sleep});
   await checkContributionImages({send,evaluate,waitFor,navigate,click,selectOption});
   await checkScrollbarLayout({send,evaluate,waitFor,navigate,click,key});
   await checkCreatorCategories({send, evaluate, waitFor, navigate, click, selectOption});

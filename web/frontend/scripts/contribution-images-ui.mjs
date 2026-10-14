@@ -10,7 +10,7 @@ export async function checkContributionImages({send,evaluate,waitFor,navigate,cl
   await waitFor(`!!document.querySelector('[data-contribution-form]')`);
   assert.equal(await evaluate('location.href'),route);
   await evaluate(`(()=>{for(const [name,value] of Object.entries({name:'Plataforma com imagem',url:'https://example.org/image-course',summary:'Uma plataforma com imagem no cadastro.',description:'Descrição para conferir a prévia e o envio da imagem.'})) {const el=document.querySelector('[data-contribution-form] [name="'+name+'"]');Object.getOwnPropertyDescriptor(el.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype,'value').set.call(el,value);el.dispatchEvent(new Event('input',{bubbles:true}));}})()`);
-  await waitFor(`document.querySelector('aside[aria-label="Prévia da sugestão"]').textContent.includes('Plataforma com imagem')`);
+  await waitFor(`document.querySelector('aside[aria-label="Prévia da sugestão"]')?.textContent.includes('Plataforma com imagem')`);
   await click(`document.querySelector('[data-contribution-form] input[type="file"]')`);
   await evaluate(`(()=>{const bytes=Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aAvsAAAAASUVORK5CYII='),c=>c.charCodeAt(0));const data=new DataTransfer();data.items.add(new File([bytes],'foto.png',{type:'image/png'}));const el=document.querySelector('[data-contribution-form] input[type="file"]');el.files=data.files;el.dispatchEvent(new Event('change',{bubbles:true}));})()`);
   await waitFor(`document.querySelector('aside img')?.src.startsWith('blob:') && document.querySelector('aside img').naturalWidth>0`);

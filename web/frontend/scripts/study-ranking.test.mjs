@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { rankStudy, interactions } from "../src/study-ranking.ts";
+import { rankStudy, interactions } from "../src/study-ranking.mjs";
 import { paginate } from "../src/pagination.ts";
 const items = [
   { type: "books", slug: "b", name: "Beta" },
