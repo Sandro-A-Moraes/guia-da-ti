@@ -22,7 +22,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { categories, labels, taxonomy } from './catalog';
 import { CreatorAvatar, useCreatorProfile, followersLabel } from './CreatorProfile';
 import { brazilRegions, type CommunityLocation } from './community-location';
-import brazilMap from './data/brazil-states.json';
 import { communityAudiences, communityCategoryOrder, communityModalities, communityPlatforms } from './community-options';
 
 type Session = { enabled: boolean; login: string | null; avatarUrl: string | null; csrfToken: string; canManageAds?: boolean };
@@ -255,6 +254,15 @@ export function ResourceContribution({initialCategory = "", onSubmitted}: {initi
   const [technologies, setTechnologies] = useState<string[]>([]);
   const [communityScope, setCommunityScope] = useState<CommunityLocation['scope'] | ''>('');
   const [communityStates, setCommunityStates] = useState<string[]>([]);
+  const [brazilStates, setBrazilStates] = useState<{ uf: string; name: string }[]>([]);
+  useEffect(() => {
+    if (communityScope !== 'regional' || brazilStates.length) return;
+    let active = true;
+    void import('./data/brazil-states.json').then(({ default: map }) => {
+      if (active) setBrazilStates([...map.states].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')));
+    }).catch(() => { /* The region buttons still work without the state list. */ });
+    return () => { active = false; };
+  }, [communityScope, brazilStates.length]);
   const [communityPlatformIds, setCommunityPlatformIds] = useState<string[]>([]);
   const [communityModality, setCommunityModality] = useState('');
   const [communityAudience, setCommunityAudience] = useState('');
@@ -344,7 +352,7 @@ export function ResourceContribution({initialCategory = "", onSubmitted}: {initi
       {communityScope === 'regional' && <>
         <p className="text-xs text-muted-foreground">Marque os estados onde a comunidade atua ou selecione uma região inteira.</p>
         <div className="flex flex-wrap gap-2">{brazilRegions.map(region => <Button key={region.id} type="button" size="sm" variant="outline" onClick={() => setCommunityStates(current => [...new Set([...current, ...region.states])])}>{region.name}</Button>)}</div>
-        <div className="grid gap-2 sm:grid-cols-2">{[...brazilMap.states].sort((a,b) => a.name.localeCompare(b.name, 'pt-BR')).map(state => <Label key={state.uf} className="flex items-center gap-2 text-xs"><Checkbox name="communityStates" value={state.uf} checked={communityStates.includes(state.uf)} onCheckedChange={checked => setCommunityStates(current => checked === true ? [...current, state.uf] : current.filter(uf => uf !== state.uf))} />{state.name} ({state.uf})</Label>)}</div>
+        <div className="grid gap-2 sm:grid-cols-2">{brazilStates.map(state => <Label key={state.uf} className="flex items-center gap-2 text-xs"><Checkbox name="communityStates" value={state.uf} checked={communityStates.includes(state.uf)} onCheckedChange={checked => setCommunityStates(current => checked === true ? [...current, state.uf] : current.filter(uf => uf !== state.uf))} />{state.name} ({state.uf})</Label>)}</div>
       </>}
     </fieldset>}
     {type === 'communities' && <SelectField label="Público da comunidade" name="communityAudience" required value={communityAudience} onChange={setCommunityAudience} placeholder="Escolha o público" options={communityAudiences} />}
