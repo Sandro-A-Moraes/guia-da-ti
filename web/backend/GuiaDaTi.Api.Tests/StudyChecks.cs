@@ -22,7 +22,8 @@ static class StudyChecks
                 ["STUDY_ACTIVITY_PATH"]=path,["COMMUNITY_USERS_PATH"]=Path.Combine(folder,"users.json"),["DISCUSSIONS_TOKEN"]="read-only-test",["DISCUSSIONS_REPOSITORY"]="example/community"
             }).Build();
             var resource = new Resource("book","books","Livro","Resumo","Descrição","https://example.com/book",[],[],["pt-BR"],"2026-10-07",false);
-            var catalog = new Catalog(1,new([],[],[],["books"]),[resource,resource with {Slug="demo",Demo=true}]);
+            var otherResource = resource with {Slug="other"};
+            var catalog = new Catalog(1,new([],[],[],["books"]),[resource,otherResource,resource with {Slug="demo",Demo=true}]);
             var environment = new StudyEnvironment { ContentRootPath=folder };
             var handler=new StudyGitHub(resource);var factory=new StudyFactory(handler);
             using var reader=new DiscussionsClient(factory,config);var writer=new DiscussionWriter(factory,config);
@@ -46,14 +47,31 @@ static class StudyChecks
             var second=await restarted.CommentAsync(resource,"visitor-token","Outra experiência",default);
             Assert(first==7 && second==7 && handler.Topics==1 && handler.Comments==2 && handler.VisitorOnly,"Comments reuse one resource topic and visitor credentials");
             Assert((await activity.ListAsync("1",default))[0].Comments==2,"Only visitor comments count, not the resource presentation");
+            handler.BlockMutations = true;
+            var slowComment = activity.CommentAsync(resource, "visitor-token", "Comentário lento", default);
+            try {
+                await handler.MutationStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+                var otherVote = activity.VoteAsync(otherResource, "2", new(Rating: 5), default);
+                var sameResourceVote = activity.VoteAsync(resource, "2", new(Hype: true), default);
+                var activityRead = activity.ListAsync("1", default);
+                Assert(await Task.WhenAny(otherVote, Task.Delay(TimeSpan.FromSeconds(2))) == otherVote,"A slow comment does not block another resource");
+                Assert(await Task.WhenAny(sameResourceVote, Task.Delay(TimeSpan.FromSeconds(2))) == sameResourceVote,"A slow comment does not block a vote on the same resource");
+                Assert(await Task.WhenAny(activityRead, Task.Delay(TimeSpan.FromSeconds(2))) == activityRead,"Activity reads do not wait for a slow comment");
+                await otherVote;
+                await sameResourceVote;
+                await activityRead;
+            }
+            finally { handler.ReleaseMutations.TrySetResult(); }
+            await slowComment;
+            Assert((await activity.ListAsync("2",default))[0] is {Hypes:21,Ratings:2,MyHype:true},"A vote during a slow comment is preserved");
             handler.Unavailable=true;
             await reader.InvalidateAsync(default);
-            Assert((await activity.ListAsync("1",default))[0] is {Comments:null,Hypes:20},"GitHub outages keep real votes and unknown comment counts");
+            Assert((await activity.ListAsync("1",default))[0] is {Comments:null,Hypes:21},"GitHub outages keep real votes and unknown comment counts");
             handler.Unavailable=false;
             // Lose only the mapping to reproduce a persistence failure after GitHub accepted a topic.
             await File.WriteAllTextAsync(path,"{\"version\":1,\"items\":{}}");
             await activity.CommentAsync(resource,"visitor-token","Recuperada",default);
-            Assert(handler.Topics==1 && handler.Comments==3,"Recovery uses direct repository reads rather than delayed search indexing");
+            Assert(handler.Topics==1 && handler.Comments==4,"Recovery uses direct repository reads rather than delayed search indexing");
             await activity.VoteAsync(resource,"1",new(Rating:4,Hype:true),default);
             handler.Missing=true;
             await reader.InvalidateAsync(default);
@@ -120,10 +138,17 @@ sealed class StudyGitHub(Resource resource):HttpMessageHandler
     public int Topics;public int Comments;public bool VisitorOnly=true;public bool Unavailable;public bool Missing;
     public string TopicBody = "";
     public bool OriginalSuggestion;
+    public bool BlockMutations;
+    public TaskCompletionSource MutationStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    public TaskCompletionSource ReleaseMutations { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,CancellationToken cancellation)
     {
         if(Unavailable)return new(HttpStatusCode.ServiceUnavailable){Content=JsonContent.Create(new {})};
         using var payload=JsonDocument.Parse(await request.Content!.ReadAsStringAsync(cancellation));var query=payload.RootElement.GetProperty("query").GetString()!;
+        if(BlockMutations && query.Contains("mutation",StringComparison.Ordinal)) {
+            MutationStarted.TrySetResult();
+            await ReleaseMutations.Task.WaitAsync(cancellation);
+        }
         object data;
         if(query.Contains("mutation")) {
             VisitorOnly&=request.Headers.Authorization?.Parameter=="visitor-token";

@@ -8,6 +8,7 @@ public sealed class DiscussionsClient(IHttpClientFactory clients, IConfiguration
 {
     private readonly MemoryCache cache = new(new MemoryCacheOptions { SizeLimit = 128 });
     private readonly SemaphoreSlim gate = new(1, 1);
+    private long cacheGeneration;
     private readonly string repository = configuration["DISCUSSIONS_REPOSITORY"] ?? "guia-da-ti/guia-da-ti-dados";
     private readonly string? token = configuration["DISCUSSIONS_TOKEN"];
     public bool Configured => !string.IsNullOrWhiteSpace(token)
@@ -15,7 +16,7 @@ public sealed class DiscussionsClient(IHttpClientFactory clients, IConfiguration
     public string RepositoryUrl => $"https://github.com/{repository}/discussions";
     public async Task InvalidateAsync(CancellationToken cancellation) {
         await gate.WaitAsync(cancellation);
-        try { cache.Clear(); }
+        try { cache.Clear(); cacheGeneration++; }
         finally { gate.Release(); }
     }
 
@@ -66,30 +67,35 @@ public sealed class DiscussionsClient(IHttpClientFactory clients, IConfiguration
         var key = query + JsonSerializer.Serialize(variables);
         if (cache.TryGetValue(key, out JsonElement cached)) return cached;
         await gate.WaitAsync(cancellation);
-        try
-        {
-            if (cache.TryGetValue(key, out cached)) return cached;
-            using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.github.com/graphql");
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            request.Headers.UserAgent.ParseAdd("GuiaDaTi/1.0");
-            request.Content = JsonContent.Create(new { query, variables });
-            using var client = clients.CreateClient("discussions");
-            using var response = await client.SendAsync(request, cancellation);
-            response.EnsureSuccessStatusCode();
-            using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellation));
-            var root = document.RootElement;
-            // GitHub reports a missing discussion as both null data and a NOT_FOUND error.
-            if (root.TryGetProperty("errors", out var errors) && !errors.EnumerateArray().All(error =>
-                error.TryGetProperty("type", out var type) && type.GetString() == "NOT_FOUND"
-                && error.TryGetProperty("path", out var path) && path.ValueKind == JsonValueKind.Array
-                && path.EnumerateArray().Select(part => part.GetString()).SequenceEqual(new[] { "repository", "discussion" })))
-                throw new DiscussionsUnavailableException();
-            var data = root.GetProperty("data").GetProperty("repository");
-            // Never publish private content, even if the configured token can read it.
-            if (data.ValueKind == JsonValueKind.Null || data.GetProperty("isPrivate").GetBoolean()
-                || !data.GetProperty("hasDiscussionsEnabled").GetBoolean()) throw new DiscussionsUnavailableException();
-            cached = root.GetProperty("data").Clone();
-            cache.Set(key, cached, new MemoryCacheEntryOptions { Size = 1, AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(1) });
+        long generation;
+        try { generation = cacheGeneration; }
+        finally { gate.Release(); }
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.github.com/graphql");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        request.Headers.UserAgent.ParseAdd("GuiaDaTi/1.0");
+        request.Content = JsonContent.Create(new { query, variables });
+        using var client = clients.CreateClient("discussions");
+        using var response = await client.SendAsync(request, cancellation);
+        response.EnsureSuccessStatusCode();
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellation));
+        var root = document.RootElement;
+        // GitHub reports a missing discussion as both null data and a NOT_FOUND error.
+        if (root.TryGetProperty("errors", out var errors) && !errors.EnumerateArray().All(error =>
+            error.TryGetProperty("type", out var type) && type.GetString() == "NOT_FOUND"
+            && error.TryGetProperty("path", out var path) && path.ValueKind == JsonValueKind.Array
+            && path.EnumerateArray().Select(part => part.GetString()).SequenceEqual(new[] { "repository", "discussion" })))
+            throw new DiscussionsUnavailableException();
+        var data = root.GetProperty("data").GetProperty("repository");
+        // Never publish private content, even if the configured token can read it.
+        if (data.ValueKind == JsonValueKind.Null || data.GetProperty("isPrivate").GetBoolean()
+            || !data.GetProperty("hasDiscussionsEnabled").GetBoolean()) throw new DiscussionsUnavailableException();
+        cached = root.GetProperty("data").Clone();
+
+        await gate.WaitAsync(cancellation);
+        try {
+            if (cacheGeneration == generation)
+                cache.Set(key, cached, new MemoryCacheEntryOptions { Size = 1, AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(1) });
             return cached;
         }
         finally { gate.Release(); }
