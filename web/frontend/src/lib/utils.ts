@@ -1,3 +1,2 @@
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-export function cn(...inputs: ClassValue[]) { return twMerge(clsx(inputs)); }
+// Same engine as the shadcn/ui components, so tailwind-merge stays out of the bundle.
+export { cn } from 'cn';
