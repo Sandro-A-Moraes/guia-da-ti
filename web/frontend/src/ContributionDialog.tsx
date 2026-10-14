@@ -1,26 +1,42 @@
 import { useEffect, useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ResourceContribution } from './Participation';
+
+type ContributionForm = typeof import('./ResourceContribution').ResourceContribution;
+let formModule: Promise<ContributionForm> | undefined;
+// The form loads on the first opening. The dialog waits for it, so focus lands on the first field.
+function loadForm() {
+  formModule ??= import('./ResourceContribution').then(module => module.ResourceContribution);
+  formModule.catch(() => { formModule = undefined; });
+  return formModule;
+}
 
 export function ContributionDialog() {
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState('');
+  const [Form, setForm] = useState<ContributionForm | null>(null);
   const opener = useRef<HTMLElement | null>(null);
   useEffect(() => {
-    const show = (event: Event) => { opener.current = document.activeElement as HTMLElement; setCategory((event as CustomEvent<string>).detail || ''); setOpen(true); };
+    let active = true;
+    function openWith(next: string) {
+      void loadForm().then(component => { if (active) setForm(() => component); }, () => {}).finally(() => {
+        if (!active) return;
+        setCategory(next);
+        setOpen(true);
+      });
+    }
+    const show = (event: Event) => { opener.current = document.activeElement as HTMLElement; openWith((event as CustomEvent<string>).detail || ''); };
     window.addEventListener('guia:contribute', show);
     const params = new URLSearchParams(window.location.search);
     if (params.has('sugerir') || window.location.pathname.replace(/\/$/, '') === '/contribuir') {
-      setCategory(params.get('sugerir') || params.get('categoria') || '');
       window.history.replaceState(null, '', '/');
-      setOpen(true);
+      openWith(params.get('sugerir') || params.get('categoria') || '');
     }
-    return () => window.removeEventListener('guia:contribute', show);
+    return () => { active = false; window.removeEventListener('guia:contribute', show); };
   }, []);
   return <Dialog open={open} onOpenChange={setOpen}>
     <DialogContent onCloseAutoFocus={event => { event.preventDefault(); opener.current?.focus({preventScroll:true}); }} className="max-h-[90dvh] overflow-y-auto sm:max-w-4xl">
       <DialogHeader><DialogTitle>Contribuir com o guia</DialogTitle><DialogDescription>Preencha os dados e confira a prévia antes de enviar sua sugestão.</DialogDescription></DialogHeader>
-      <ResourceContribution key={category} initialCategory={category} onSubmitted={() => setOpen(false)} />
+      {Form ? <Form key={category} initialCategory={category} onSubmitted={() => setOpen(false)} /> : <p role="alert" className="text-sm text-destructive">Não foi possível carregar o formulário. Tente novamente.</p>}
     </DialogContent>
   </Dialog>;
 }
