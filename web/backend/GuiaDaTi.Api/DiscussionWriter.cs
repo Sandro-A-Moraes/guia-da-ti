@@ -5,7 +5,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Antiforgery;
 
-public sealed class DiscussionWriter(IHttpClientFactory clients, IConfiguration configuration)
+public sealed class DiscussionWriter(IHttpClientFactory clients, IConfiguration configuration, ILogger<DiscussionWriter>? logger = null)
 {
     private readonly string repository = configuration["DISCUSSIONS_REPOSITORY"] ?? "guia-da-ti/guia-da-ti-dados";
     public async Task<int> PublishAsync(string token, DiscussionDraft draft, CancellationToken cancellation)
@@ -119,20 +119,39 @@ public sealed class DiscussionWriter(IHttpClientFactory clients, IConfiguration 
         request.Content = JsonContent.Create(new { query, variables });
         using var client = clients.CreateClient("discussions");
         using var response = await client.SendAsync(request, cancellation);
+        if (response.StatusCode is System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden) {
+            var reason = response.StatusCode == System.Net.HttpStatusCode.Unauthorized ? "authentication" : "forbidden";
+            LogRejection(response, query, reason);
+            throw Rejected(reason);
+        }
         response.EnsureSuccessStatusCode();
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellation));
         if (document.RootElement.TryGetProperty("errors", out var errors)) {
-            var permissionError = errors.EnumerateArray().Any(error =>
-                error.TryGetProperty("type", out var type) && type.GetString() == "FORBIDDEN"
-                || error.TryGetProperty("message", out var message) && message.GetString() is { } text
-                    && (text.Contains("permission", StringComparison.OrdinalIgnoreCase)
-                        || text.Contains("access", StringComparison.OrdinalIgnoreCase)
-                        || text.Contains("authorize", StringComparison.OrdinalIgnoreCase)));
-            throw new DiscussionWriteRejectedException(permissionError
-                ? "Sua conta precisa de acesso de escrita ao repositório para realizar esta ação."
-                : "O GitHub recusou esta ação. Confira os dados e tente novamente.");
+            // Do not infer repository roles from a generic FORBIDDEN response.
+            var types = errors.EnumerateArray().Select(error => error.TryGetProperty("type", out var type) ? type.GetString() : null).ToArray();
+            var reason = types.Contains("INSUFFICIENT_SCOPES") ? "scope"
+                : types.Contains("FORBIDDEN") ? "forbidden" : "graphql";
+            LogRejection(response, query, reason);
+            throw Rejected(reason);
         }
         return document.RootElement.GetProperty("data").Clone();
+    }
+
+    private static DiscussionWriteRejectedException Rejected(string reason) => new(reason switch {
+        "authentication" => "Sua autorização do GitHub expirou ou foi revogada. Saia e entre novamente. Seu texto continua no formulário.",
+        "scope" => "A autorização do GitHub não inclui a permissão necessária. Saia e entre novamente para revisar os acessos. Seu texto continua no formulário.",
+        "forbidden" => "O GitHub recusou esta ação. A autorização do aplicativo ou uma restrição da conta ou da comunidade pode impedir a publicação. Seu texto continua no formulário.",
+        _ => "O GitHub recusou esta ação. Confira os dados e tente novamente."
+    });
+
+    private void LogRejection(HttpResponseMessage response, string query, string reason)
+    {
+        var operation = query.Contains("mutation(") ? query.Split('{', 2)[1].Split('(', 2)[0].Trim() : "metadata";
+        var requestId = response.Headers.TryGetValues("X-GitHub-Request-Id", out var values) ? values.FirstOrDefault() : null;
+        if (requestId is null || !Regex.IsMatch(requestId, @"\A[A-Za-z0-9:.-]{1,100}\z")) requestId = "unavailable";
+        // Never log the token, variables, user content or upstream error messages.
+        logger?.LogWarning("GitHub discussion request rejected. Operation {Operation}, reason {Reason}, HTTP {StatusCode}, GitHub request {GitHubRequestId}",
+            operation, reason, (int)response.StatusCode, requestId);
     }
 }
 
