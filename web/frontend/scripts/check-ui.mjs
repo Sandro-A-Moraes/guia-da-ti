@@ -80,7 +80,7 @@ try {
   await checkRouteFlash({send,evaluate,waitFor,navigate});
   assert.equal(await evaluate(`!!document.querySelector('main [aria-label="Patrocínio master"]')`), false);
   assert.equal(await evaluate(`!!document.querySelector('main #apoiadores')`), true);
-  assert.equal(await evaluate(`document.querySelector('main #apoiadores a[href="/sobre#apoiadores"]').textContent`), 'Conhecer os apoiadores');
+  assert.equal(await evaluate(`document.querySelector('main #apoiadores a[href="/sobre/#contato"]').textContent`), 'Apoie o Guia');
   assert.equal(await evaluate(`[...document.querySelectorAll('[data-slot="navigation-menu-trigger"]')].some(element => element.textContent.trim() === 'Projeto')`), false);
   assert.equal(await evaluate(`!!document.querySelector('[aria-label="Principal"] a[href="/sobre"]')`), true);
   for (const path of ['/apoiadores', '/apoiadores/']) {

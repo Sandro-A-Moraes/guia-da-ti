@@ -1,6 +1,53 @@
 @import "tailwindcss";
 @custom-variant dark (&:is(.dark *));
 
+.supporters-mosaic {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-auto-flow: dense;
+  gap: clamp(6px, 1vw, 12px);
+}
+.supporters-tile {
+  display: flex;
+  aspect-ratio: 1;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: clamp(10px, 1.3vw, 16px);
+  background: var(--card);
+  box-shadow: 0 2px 6px color-mix(in oklab, var(--foreground) 3%, transparent);
+}
+.supporters-partner { transition: border-color 150ms, background-color 150ms; }
+.supporters-partner:hover { border-color: var(--primary); background: var(--accent); }
+.supporters-partner:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
+.supporters-partner img { width: 65%; height: 65%; object-fit: contain; }
+.supporters-silhouette {
+  width: 57%;
+  height: 57%;
+  color: color-mix(in oklab, var(--muted-foreground) 20%, transparent);
+  fill: color-mix(in oklab, var(--muted-foreground) 8%, transparent);
+}
+.supporters-tile-extra { display: none; }
+.supporters-invite {
+  grid-column: 3 / span 4;
+  grid-row: 2 / span 4;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 10px;
+  padding: clamp(12px, 2.5vw, 28px);
+}
+.supporters-invite > p:first-child { font-size: clamp(11px, 1.4vw, 14px); }
+.supporters-invite-title { font-size: clamp(18px, 3.5vw, 28px); line-height: 1.12; text-wrap: balance; }
+.supporters-invite a { font-size: clamp(11px, 1.4vw, 14px); padding-inline: 10px; }
+@media (min-width: 768px) {
+  .supporters-mosaic { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+  .supporters-tile-extra { display: flex; }
+  .supporters-invite { grid-column: 7 / span 5; grid-row: 2 / span 3; }
+  .supporters-invite-title { font-size: clamp(22px, 2.8vw, 34px); }
+}
+
 html[data-guide-dismissed] .guide-announcement { display: none; }
 
 .skeleton { animation: skeleton-pulse 1.5s ease-in-out infinite; }
