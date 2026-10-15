@@ -7,6 +7,7 @@ import {
   MessageSquareText,
   Star,
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -517,7 +518,7 @@ export function StudyDetail({ resource }: { resource: Resource }) {
               <label htmlFor={id} className="text-sm font-medium">
                 Comente sua experiência
               </label>
-              <textarea
+              <Textarea
                 id={id}
                 required
                 maxLength={9000}
@@ -525,7 +526,6 @@ export function StudyDetail({ resource }: { resource: Resource }) {
                 onChange={(e) => setBody(e.target.value)}
                 rows={4}
                 disabled={busy || loading || !!error}
-                className="w-full rounded-lg border bg-transparent p-3 text-sm"
               />
               <p className="text-xs text-muted-foreground">
                 Seu comentário aparecerá no Guia e no GitHub com o nome de{" "}
