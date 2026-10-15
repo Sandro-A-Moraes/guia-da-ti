@@ -144,6 +144,14 @@ try {
     await send('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: false });
     assert.equal(await evaluate(`document.documentElement.scrollWidth <= innerWidth`), true, `Catalog overflow at ${width}px`);
   }
+  for (const route of ['/empresas/', '/divulgue/']) {
+    await navigate(route);
+    for (const width of [320, 360, 390, 414, 768]) {
+      await send('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: false });
+      assert.equal(await evaluate(`document.documentElement.scrollWidth <= innerWidth`), true, `${route} overflow at ${width}px`);
+    }
+  }
+  await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
   await navigate('/areas/backend/');
   await evaluate(`(()=>{const input=document.querySelector('#resource-search');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'Primeiros passos');input.dispatchEvent(new Event('input',{bubbles:true}));})()`);
   await waitFor(`!!document.querySelector('main table a[aria-label="Ver detalhes: Primeiros passos com C#"]')`);
