@@ -15,9 +15,21 @@ public sealed class ServerTickets : ITicketStore
     public static string StoragePath(IConfiguration configuration, IHostEnvironment environment) =>
         Path.GetFullPath(configuration["AUTH_STORAGE_PATH"] ?? Path.Combine(environment.ContentRootPath, "App_Data", "auth"));
 
-    internal static DirectoryInfo CreatePrivateDirectory(string path) => OperatingSystem.IsWindows()
-        ? Directory.CreateDirectory(path)
-        : Directory.CreateDirectory(path, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+    private const UnixFileMode PrivateFile = UnixFileMode.UserRead | UnixFileMode.UserWrite;
+    private const UnixFileMode PrivateFolder = PrivateFile | UnixFileMode.UserExecute;
+    private static readonly TimeSpan SweepInterval = TimeSpan.FromDays(1);
+    private DateTimeOffset lastSweep;
+
+    // CreateDirectory only applies the mode to new folders. Folders from older versions are tightened too.
+    internal static DirectoryInfo CreatePrivateDirectory(string path)
+    {
+        if (OperatingSystem.IsWindows()) return Directory.CreateDirectory(path);
+        var folder = Directory.CreateDirectory(path, PrivateFolder);
+        // A folder owned by another user keeps its mode. Login keeps working and the deploy check reports it.
+        try { File.SetUnixFileMode(path, PrivateFolder); }
+        catch (UnauthorizedAccessException) { Console.Error.WriteLine($"Não foi possível restringir as permissões de {path}."); }
+        return folder;
+    }
 
     public ServerTickets(IConfiguration configuration, IHostEnvironment environment, IDataProtectionProvider protection, TimeProvider clock)
     {
@@ -25,6 +37,9 @@ public sealed class ServerTickets : ITicketStore
         CreatePrivateDirectory(folder);
         protector = protection.CreateProtector("GuiaDaTi.ServerTickets.v1");
         this.clock = clock;
+        // No other writer exists yet, so leftover temporary files come from interrupted writes.
+        foreach (var temporary in Directory.EnumerateFiles(folder, "*.tmp")) File.Delete(temporary);
+        lock (gate) Sweep();
     }
 
     private string? TicketPath(string key) => key.Length == 64 && key.All(Uri.IsHexDigit)
@@ -33,7 +48,10 @@ public sealed class ServerTickets : ITicketStore
     public Task<string> StoreAsync(AuthenticationTicket ticket)
     {
         var key = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
-        lock (gate) Write(TicketPath(key)!, ticket);
+        lock (gate) {
+            if (clock.GetUtcNow() - lastSweep >= SweepInterval) Sweep();
+            Write(TicketPath(key)!, ticket);
+        }
         return Task.FromResult(key);
     }
 
@@ -49,17 +67,32 @@ public sealed class ServerTickets : ITicketStore
     public Task<AuthenticationTicket?> RetrieveAsync(string key)
     {
         lock (gate) {
+            if (clock.GetUtcNow() - lastSweep >= SweepInterval) Sweep();
             var path = TicketPath(key);
-            if (path is null || !File.Exists(path)) return Task.FromResult<AuthenticationTicket?>(null);
-            AuthenticationTicket? ticket;
-            try { ticket = TicketSerializer.Default.Deserialize(protector.Unprotect(File.ReadAllBytes(path))); }
-            catch (CryptographicException) { ticket = null; }
-            if (ticket?.Properties.ExpiresUtc is not { } expires || expires <= clock.GetUtcNow()) {
-                File.Delete(path);
-                ticket = null;
-            }
-            return Task.FromResult(ticket);
+            return Task.FromResult(path is null || !File.Exists(path) ? null : ReadValid(path));
         }
+    }
+
+    // Returns null and deletes the file when the session expired or cannot be decrypted.
+    private AuthenticationTicket? ReadValid(string path)
+    {
+        AuthenticationTicket? ticket;
+        try { ticket = TicketSerializer.Default.Deserialize(protector.Unprotect(File.ReadAllBytes(path))); }
+        catch (CryptographicException) { ticket = null; }
+        if (ticket?.Properties.ExpiresUtc is { } expires && expires > clock.GetUtcNow()) return ticket;
+        File.Delete(path);
+        return null;
+    }
+
+    // Abandoned sessions are never retrieved again. Removing them limits stored OAuth tokens to active sessions.
+    private void Sweep()
+    {
+        foreach (var path in Directory.EnumerateFiles(folder, "*.ticket").ToArray()) {
+            // One unreadable file must not block every other session.
+            try { ReadValid(path); }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException) { }
+        }
+        lastSweep = clock.GetUtcNow();
     }
 
     public Task RemoveAsync(string key)
@@ -73,7 +106,10 @@ public sealed class ServerTickets : ITicketStore
         ticket.Properties.ExpiresUtc ??= clock.GetUtcNow().AddDays(7);
         var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try {
-            File.WriteAllBytes(temporary, protector.Protect(TicketSerializer.Default.Serialize(ticket)));
+            var bytes = protector.Protect(TicketSerializer.Default.Serialize(ticket));
+            var options = new FileStreamOptions { Mode = FileMode.CreateNew, Access = FileAccess.Write };
+            if (!OperatingSystem.IsWindows()) options.UnixCreateMode = PrivateFile;
+            using (var stream = new FileStream(temporary, options)) stream.Write(bytes);
             File.Move(temporary, path, overwrite: true);
         }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }

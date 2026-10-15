@@ -20,6 +20,8 @@ builder.Services.AddSingleton<ContributionImages>();
 builder.Services.AddSingleton<ContributionNotifications>();
 builder.Services.AddSingleton<ContributorsClient>();
 builder.Logging.AddFilter("System.Net.Http.HttpClient.creator-profiles", LogLevel.None);
+// Request logs include the query string, such as the OAuth callback code and state.
+builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Warning);
 builder.Services.AddHttpClient("creator-profiles", client => client.Timeout = TimeSpan.FromSeconds(8))
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
 builder.Services.AddSingleton<CreatorProfiles>();
@@ -39,6 +41,8 @@ builder.Services.Configure<ForwardedHeadersOptions>(options => {
 });
 var app = builder.Build();
 app.UseForwardedHeaders();
+// Only sent on HTTPS requests. Production requires FORWARDED_PROXY_IP so the proxy protocol is trusted.
+if (!app.Environment.IsDevelopment()) app.UseHsts();
 app.Use(async (context, next) => {
     if (context.Request.Path.Value?.TrimEnd('/') == "/contribuir") {
         context.Response.Redirect("/?sugerir=" + Uri.EscapeDataString(context.Request.Query["categoria"].ToString()));

@@ -188,6 +188,7 @@ printf '%s\n' "$release" > "$root/current-release"
 Não remova uma imagem que ainda pode ser necessária para retornar à versão anterior.
 Monitore o espaço ocupado pelas imagens. O workflow limita os logs, mas não apaga automaticamente versões antigas.
 O backup de `data`, `runtime.env` e `deploy.env` deve ficar fora da VPS.
+Esse backup contém sessões, chaves de criptografia e IDs do GitHub. Guarde-o criptografado. Veja [Segurança dos dados](seguranca-dados.md).
 
 ## Revisão de texto
 
