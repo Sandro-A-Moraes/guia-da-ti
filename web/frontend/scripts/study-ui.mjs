@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { studyTypes } from "../src/study-ranking.mjs";
+import { studyTypes } from "../src/study-ranking.ts";
 export async function installStudyFixtures(send, catalog) {
   const records = catalog.resources
     .filter((r) => studyTypes.has(r.type))

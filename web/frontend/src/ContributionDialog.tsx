@@ -20,7 +20,7 @@ export function ContributionDialog() {
   return <Dialog open={open} onOpenChange={setOpen}>
     <DialogContent onCloseAutoFocus={event => { event.preventDefault(); opener.current?.focus({preventScroll:true}); }} className="max-h-[90dvh] overflow-y-auto sm:max-w-4xl">
       <DialogHeader><DialogTitle>Contribuir com o guia</DialogTitle><DialogDescription>Preencha os dados e confira a prévia antes de enviar sua sugestão.</DialogDescription></DialogHeader>
-      <ResourceContribution key={category} initialCategory={category} onSubmitted={() => {}} />
+      <ResourceContribution key={category} initialCategory={category} />
     </DialogContent>
   </Dialog>;
 }
