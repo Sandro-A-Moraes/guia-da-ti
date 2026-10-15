@@ -6,7 +6,7 @@ import map from './data/brazil-states.json';
 import { brazilRegions, toggleStates, type LocationSelection } from './community-location';
 import { LazyLoad, retryableLazy } from './LazyLoad';
 
-const WorldMap = retryableLazy(() => import('./WorldMap').then(module => module.WorldMap));
+const WorldMap = retryableLazy(() => import('./WorldMap'), module => module.WorldMap);
 
 export function CommunityLocationFilter({ value, onChange }: { value: LocationSelection; onChange: (next: LocationSelection) => void }) {
   const [mode, setMode] = useState<'states' | 'regions'>('states');

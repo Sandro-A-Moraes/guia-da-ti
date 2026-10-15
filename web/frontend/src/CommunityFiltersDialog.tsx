@@ -6,7 +6,7 @@ import {emptyLocationSelection,type LocationSelection} from './community-locatio
 import {LazyLoad,retryableLazy} from './LazyLoad';
 
 // The maps only load when the dialog opens.
-const CommunityLocationFilter=retryableLazy(()=>import('./CommunityLocationFilter').then(module=>module.CommunityLocationFilter));
+const CommunityLocationFilter=retryableLazy(()=>import('./CommunityLocationFilter'),module=>module.CommunityLocationFilter);
 
 export function CommunityFiltersDialog({value,onChange}:{value:LocationSelection;onChange:(next:LocationSelection)=>void}) {
   const [open,setOpen]=useState(false);

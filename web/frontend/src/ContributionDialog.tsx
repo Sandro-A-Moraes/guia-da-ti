@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { retryableImport } from './LazyLoad';
 
 type ContributionForm = typeof import('./ResourceContribution').ResourceContribution;
 let formModule: Promise<ContributionForm> | undefined;
+const requestForm = retryableImport(() => import('./ResourceContribution'));
 // The form loads on the first opening. The dialog waits for it, so focus lands on the first field.
 function loadForm() {
-  formModule ??= import('./ResourceContribution').then(module => module.ResourceContribution);
+  formModule ??= requestForm().then(module => module.ResourceContribution);
   formModule.catch(() => { formModule = undefined; });
   return formModule;
 }

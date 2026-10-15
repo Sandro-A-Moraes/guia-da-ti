@@ -2,14 +2,31 @@ import { Component, lazy, Suspense, useState, type ComponentType, type ReactNode
 import { RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-// React.lazy keeps a rejected import in cache. After a failure the loader creates a new lazy component, so the next render requests the module again.
-export function retryableLazy<P extends object>(load: () => Promise<ComponentType<P>>) {
-  const create = () => lazy(() => load().then(component => ({ default: component })));
+// The chunk address from the import error, e.g. "Failed to fetch dynamically imported module: https://…/assets/X-hash.js".
+function failedChunk(error: unknown) {
+  const match = String((error as Error)?.message ?? error).match(/https?:\/\/\S+?\.js\b/);
+  return match && new URL(match[0]).origin === window.location.origin ? match[0] : undefined;
+}
+
+// Some browsers keep a failed module address until the page reloads. After a failure, each new request uses a new query string.
+export function retryableImport<M>(load: () => Promise<M>) {
+  let attempt = 0;
+  let chunk: string | undefined;
+  return () => {
+    const loading: Promise<M> = chunk ? import(/* @vite-ignore */ `${chunk}?retry=${++attempt}`) : load();
+    return loading.catch(error => { chunk ??= failedChunk(error); throw error; });
+  };
+}
+
+// React.lazy also keeps a rejected import in cache. After a failure the loader creates a new lazy component.
+export function retryableLazy<M, P extends object>(load: () => Promise<M>, pick: (module: M) => ComponentType<P>) {
+  const request = retryableImport(load);
+  const create = () => lazy(() => request().then(module => ({ default: pick(module) })));
   let current = create();
   return { get: () => current, reset: () => { current = create(); } };
 }
 
-type Loader<P extends object> = ReturnType<typeof retryableLazy<P>>;
+type Loader<P extends object> = { get: () => ComponentType<P>; reset: () => void };
 
 class LoadBoundary extends Component<{ fallback: ReactNode; onError: () => void; children: ReactNode }, { failed: boolean }> {
   state = { failed: false };

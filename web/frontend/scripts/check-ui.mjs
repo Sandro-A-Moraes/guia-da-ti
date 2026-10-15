@@ -169,7 +169,8 @@ try {
   const filterButton = "[...document.querySelectorAll('main button')].find(button=>button.textContent.includes('Filtrar comunidades'))";
   await click(filterButton);
   await waitFor(`document.querySelector('[role="dialog"]')?.textContent.includes('Filtrar comunidades')`);
-  assert.equal(await evaluate(`document.querySelectorAll('svg [data-uf]').length`),27);
+  // The map loads on demand after the dialog opens.
+  await waitFor(`document.querySelectorAll('svg [data-uf]').length === 27`);
   await evaluate(`document.querySelector('[data-uf="SP"]').focus()`); await key('Enter');
   await evaluate(`document.querySelector('[data-uf="RJ"]').focus()`); await key('Enter');
   assert.equal(await evaluate(`document.querySelectorAll('svg path[aria-pressed="true"]').length`),2);
