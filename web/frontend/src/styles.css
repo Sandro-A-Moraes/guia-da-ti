@@ -21,12 +21,14 @@
 .supporters-partner { transition: border-color 150ms, background-color 150ms; }
 .supporters-partner:hover { border-color: var(--primary); background: var(--accent); }
 .supporters-partner:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
-.supporters-partner img { width: 65%; height: 65%; object-fit: contain; }
+.supporters-partner img { width: 40%; height: 40%; max-width: 32px; max-height: 32px; object-fit: contain; }
 .supporters-silhouette {
-  width: 57%;
-  height: 57%;
-  color: color-mix(in oklab, var(--muted-foreground) 20%, transparent);
-  fill: color-mix(in oklab, var(--muted-foreground) 8%, transparent);
+  width: 30%;
+  height: 30%;
+  max-width: 24px;
+  max-height: 24px;
+  color: color-mix(in oklab, var(--muted-foreground) 13%, transparent);
+  fill: color-mix(in oklab, var(--muted-foreground) 4%, transparent);
 }
 .supporters-tile-extra { display: none; }
 .supporters-invite {
