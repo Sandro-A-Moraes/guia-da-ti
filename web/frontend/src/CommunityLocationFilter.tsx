@@ -1,11 +1,12 @@
-import { lazy, Suspense, useState } from 'react';
+import { useState } from 'react';
 import { Globe2, MapPin, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import map from './data/brazil-states.json';
 import { brazilRegions, toggleStates, type LocationSelection } from './community-location';
+import { LazyLoad, retryableLazy } from './LazyLoad';
 
-const WorldMap = lazy(() => import('./WorldMap').then(module => ({ default: module.WorldMap })));
+const WorldMap = retryableLazy(() => import('./WorldMap').then(module => module.WorldMap));
 
 export function CommunityLocationFilter({ value, onChange }: { value: LocationSelection; onChange: (next: LocationSelection) => void }) {
   const [mode, setMode] = useState<'states' | 'regions'>('states');
@@ -21,7 +22,7 @@ export function CommunityLocationFilter({ value, onChange }: { value: LocationSe
     </div>
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
       <div className="flex min-h-80 min-w-0 flex-col justify-center rounded-lg bg-muted/20 p-3">
-        {value.scope === 'international' ? <Suspense fallback={<div className="min-h-64" />}><WorldMap /></Suspense> : <><div role="group" aria-label="Selecionar no mapa por" className="flex justify-center gap-2">
+        {value.scope === 'international' ? <LazyLoad loader={WorldMap} props={{}} loading={<div className="min-h-64" />} message="Não foi possível carregar o mapa mundial." /> : <><div role="group" aria-label="Selecionar no mapa por" className="flex justify-center gap-2">
           <Button type="button" size="sm" variant={mode === 'states' ? 'default' : 'ghost'} aria-pressed={mode === 'states'} onClick={() => setMode('states')}>Estados</Button>
           <Button type="button" size="sm" variant={mode === 'regions' ? 'default' : 'ghost'} aria-pressed={mode === 'regions'} onClick={() => setMode('regions')}>Regiões</Button>
         </div>

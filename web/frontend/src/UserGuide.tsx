@@ -123,7 +123,7 @@ function GuideTimeline({ dark, steps = guideSteps, embedded = false }: { dark: b
         items.forEach(item => gsap.from(item, { opacity: 0, y: 24, duration: 0.55, ease: 'power2.out', scrollTrigger: { trigger: item, scroller: embedded ? undefined : root, start: 'top 94%', once: true } }));
         gsap.fromTo('[data-guide-line]', { scaleY: 0 }, { scaleY: 1, ease: 'none', scrollTrigger: { trigger: '[data-guide-timeline]', scroller: embedded ? undefined : root, start: 'top 70%', end: 'bottom 75%', scrub: 0.3 } });
       }, root);
-    });
+    }).catch(() => { /* Without the plugin, the timeline stays visible without animation. */ });
     return () => { disposed = true; context?.revert(); };
   }, [reduced, embedded]);
 

@@ -3,6 +3,7 @@ import { SectionGuide } from './UserGuide';
 import { createContext, useContext, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog } from 'radix-ui';
 import { Github, Moon, Sun, LogOut, HeartHandshake, X } from 'lucide-react';

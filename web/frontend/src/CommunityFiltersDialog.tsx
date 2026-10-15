@@ -1,11 +1,12 @@
-import {lazy,Suspense,useState} from 'react';
+import {useState} from 'react';
 import {Dialog} from 'radix-ui';
 import {SlidersHorizontal, X} from 'lucide-react';
 import {Button} from '@/components/ui/button';
 import {emptyLocationSelection,type LocationSelection} from './community-location';
+import {LazyLoad,retryableLazy} from './LazyLoad';
 
 // The maps only load when the dialog opens.
-const CommunityLocationFilter=lazy(()=>import('./CommunityLocationFilter').then(module=>({default:module.CommunityLocationFilter})));
+const CommunityLocationFilter=retryableLazy(()=>import('./CommunityLocationFilter').then(module=>module.CommunityLocationFilter));
 
 export function CommunityFiltersDialog({value,onChange}:{value:LocationSelection;onChange:(next:LocationSelection)=>void}) {
   const [open,setOpen]=useState(false);
@@ -18,7 +19,7 @@ export function CommunityFiltersDialog({value,onChange}:{value:LocationSelection
         <Dialog.Content data-slot="dialog-content" className="fixed left-1/2 top-1/2 z-50 flex h-[min(90dvh,48rem)] w-[calc(100%-2rem)] max-w-4xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-xl border bg-background shadow-xl">
           <div className="relative shrink-0 border-b px-4 py-4 pr-14 sm:px-6"><Dialog.Title className="text-xl font-semibold">Filtrar comunidades</Dialog.Title><Dialog.Description className="mt-1 text-sm text-muted-foreground">Filtre por estado, região ou alcance da comunidade.</Dialog.Description><Dialog.Close aria-label="Fechar filtros" className="absolute right-4 top-4 rounded-sm p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"><X className="size-4" /></Dialog.Close></div>
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
-            <Suspense fallback={<p role="status" className="text-sm text-muted-foreground">Carregando mapa…</p>}><CommunityLocationFilter value={draft} onChange={next=>setDraft(current=>({...current,...next}))} /></Suspense>
+            <LazyLoad loader={CommunityLocationFilter} props={{value:draft,onChange:(next:LocationSelection)=>setDraft(current=>({...current,...next}))}} loading={<p role="status" className="text-sm text-muted-foreground">Carregando mapa…</p>} message="Não foi possível carregar o filtro de localização." />
           </div>
           <div className="flex shrink-0 flex-nowrap items-center justify-between gap-1 border-t px-2 py-3 sm:gap-2 sm:px-6">
             <Button size="sm" variant="ghost" className="px-2 text-xs sm:px-3 sm:text-sm" onClick={()=>setDraft(emptyLocationSelection())}>Limpar filtros</Button>
