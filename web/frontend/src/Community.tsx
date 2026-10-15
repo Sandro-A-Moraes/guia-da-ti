@@ -1,35 +1,38 @@
 import community from './generated/community.json';
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Maintainers } from './Maintainers';
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight, Blocks, Box, Building2, Cloud, Code2, Command, Cpu, Database, Hexagon, Layers, Network, Shield } from 'lucide-react';
+
+const silhouettes = [Blocks, Cloud, Hexagon, Cpu, Building2, Command, Database, Layers, Box, Network, Shield, Code2];
 
 export function Community({ area, preview = false, embedded = false }: { area: 'supporters' | 'contributors'; preview?: boolean; embedded?: boolean }) {
-  const [page, setPage] = useState(0);
-  const supporting = area === 'supporters';
-  const title = 'Empresas apoiadoras';
+  if (area === 'contributors') return <Maintainers compact={preview} />;
   const entries = community.supporters;
-  const pageSize = preview ? 4 : 12;
-  const shown = entries.slice(page * pageSize, (page + 1) * pageSize);
   const Heading = preview || embedded ? 'h2' : 'h1';
-  if (!supporting) return <Maintainers compact={preview} />;
-  if (embedded || preview) return <section id="apoiadores" aria-label={title} className="space-y-5">
-    {preview && <p className="text-xs font-medium uppercase tracking-widest text-primary">Parceiros do Guia</p>}
-    {entries.length ? <ul className="flex flex-wrap items-center justify-start gap-x-10 gap-y-5">{shown.map(entry => <li key={entry.url}><a href={entry.url} target="_blank" rel="noopener noreferrer" className="text-2xl font-semibold tracking-tight text-muted-foreground transition-colors hover:text-foreground focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-ring sm:text-3xl" aria-label={`Visitar ${entry.name}`}>{entry.name}</a></li>)}</ul> : <p className="text-sm text-muted-foreground">Os primeiros apoiadores serão apresentados aqui.</p>}
-    {entries.length > pageSize && <nav aria-label="Páginas de empresas apoiadoras" className="flex items-center justify-start gap-3 text-sm"><span className="text-muted-foreground">{page * pageSize + 1}–{Math.min((page + 1) * pageSize, entries.length)} de {entries.length}</span><div className="flex gap-2"><Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(value => value - 1)}>Anterior</Button><Button variant="outline" size="sm" disabled={(page + 1) * pageSize >= entries.length} onClick={() => setPage(value => value + 1)}>Próxima</Button></div></nav>}
-  </section>;
-  if (supporting) return <section id="apoiadores" aria-label={title} className="mx-auto w-full max-w-4xl space-y-6">
-    <div className="space-y-3">
-      <p className="text-xs font-medium uppercase tracking-[0.25em] text-muted-foreground">Parceiros do Guia</p>
-      <Heading className={preview ? 'sr-only' : 'text-2xl font-semibold uppercase tracking-wide sm:text-3xl'}>{title}</Heading>
+  // Decorative spaces keep the mosaic balanced without suggesting other partnerships.
+  const spaces = Math.max(45, entries.length);
+  return <section id="apoiadores" aria-label="Empresas apoiadoras" className="space-y-5">
+    {!embedded && <header className="space-y-2">
+      <p className="text-xs font-medium uppercase tracking-widest text-primary">Parceiros do Guia</p>
+      <Heading className={preview ? 'sr-only' : 'text-2xl font-semibold tracking-tight sm:text-3xl'}>Empresas apoiadoras</Heading>
+    </header>}
+    <div className="supporters-mosaic">
+      <div className="supporters-invite rounded-2xl border bg-card">
+        <p className="text-sm text-muted-foreground">Empresas que apoiam o Guia.</p>
+        <p className="supporters-invite-title font-medium tracking-tight">Mais pessoas descobrindo tecnologia.</p>
+        <Button asChild className="mt-auto self-start"><a href="/sobre/#contato">Apoie o Guia<ArrowUpRight aria-hidden="true" /></a></Button>
+      </div>
+      {Array.from({ length: spaces }, (_, index) => {
+        const entry = entries[index];
+        const Icon = silhouettes[index % silhouettes.length];
+        const className = `supporters-tile${index >= 20 && !entry ? ' supporters-tile-extra' : ''}`;
+        if (!entry) return <div key={`space-${index}`} className={className} aria-hidden="true"><Icon className="supporters-silhouette" strokeWidth={1.5} /></div>;
+        return <a key={entry.url} href={entry.url} target="_blank" rel="noopener noreferrer" aria-label={`Visitar ${entry.name}`} title={entry.name} className={`${className} supporters-partner`}>
+          {entry.name === 'HostGator'
+            ? <img src="/supporters/hostgator.ico" alt="HostGator" width="48" height="48" loading="lazy" />
+            : <span className="px-2 text-center text-xs font-semibold sm:text-sm">{entry.name}</span>}
+        </a>;
+      })}
     </div>
-    {entries.length ? <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {shown.map(entry => <li key={entry.url}>
-        <a href={entry.url} target="_blank" rel="noopener noreferrer" className="flex min-h-16 items-center justify-between gap-4 rounded-xl border px-4 py-3 text-foreground transition-colors hover:border-primary/40 hover:bg-muted/30 focus-visible:outline-2 focus-visible:outline-ring" aria-label={`Visitar ${entry.name}`}>
-          <span className="font-medium">{entry.name}</span><ArrowUpRight className="size-4 shrink-0 text-muted-foreground" />
-        </a>
-      </li>)}
-    </ul> : <p className="border p-5 text-sm text-muted-foreground">Os primeiros apoiadores serão apresentados aqui.</p>}
-    {!preview && entries.length > pageSize && <nav aria-label="Páginas de empresas apoiadoras" className="flex items-center justify-between gap-3 text-sm"><span className="text-muted-foreground">{page * pageSize + 1}–{Math.min((page + 1) * pageSize, entries.length)} de {entries.length}</span><div className="flex gap-2"><Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(value => value - 1)}>Anterior</Button><Button variant="outline" size="sm" disabled={(page + 1) * pageSize >= entries.length} onClick={() => setPage(value => value + 1)}>Próxima</Button></div></nav>}
   </section>;
 }
