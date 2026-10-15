@@ -25,9 +25,11 @@ public sealed class ServerTickets : ITicketStore
     {
         if (OperatingSystem.IsWindows()) return Directory.CreateDirectory(path);
         var folder = Directory.CreateDirectory(path, PrivateFolder);
-        // A folder owned by another user keeps its mode. Login keeps working and the deploy check reports it.
+        // A folder owned by another user cannot be changed. Start only if it is already closed to group and others.
         try { File.SetUnixFileMode(path, PrivateFolder); }
-        catch (UnauthorizedAccessException) { Console.Error.WriteLine($"Não foi possível restringir as permissões de {path}."); }
+        catch (UnauthorizedAccessException) when ((File.GetUnixFileMode(path) & ~PrivateFolder) == 0) { }
+        if ((File.GetUnixFileMode(path) & ~PrivateFolder) != 0)
+            throw new InvalidOperationException($"A pasta {path} permite acesso de outros usuários. Ajuste o dono ou a permissão para 700.");
         return folder;
     }
 
