@@ -93,6 +93,23 @@ static class StudyChecks
             Assert((await linkedActivity.ListAsync(null,default))[0].Discussion==7,"Approved resource exposes original suggestion topic before comments");
             await linkedActivity.CommentAsync(linkedResource,"visitor-token","Comentário na sugestão",default);
             Assert(linkedHandler.Topics==1 && linkedHandler.Comments==1,"Approved resource comments use suggestion thread without creating another topic");
+            var raceHandler = new StudyGitHub(resource) { BlockMutations=true };
+            var raceFactory = new StudyFactory(raceHandler);
+            var raceConfig = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string?> {
+                ["STUDY_ACTIVITY_PATH"]=Path.Combine(folder,"race-activity.json"),["COMMUNITY_USERS_PATH"]=Path.Combine(folder,"race-users.json"),
+                ["DISCUSSIONS_TOKEN"]="read-only-test",["DISCUSSIONS_REPOSITORY"]="example/community"
+            }).Build();
+            using var raceReader = new DiscussionsClient(raceFactory, raceConfig);
+            var race = new StudyEngagement(raceConfig,environment,catalog,raceReader,new DiscussionWriter(raceFactory,raceConfig));
+            var firstRace = race.CommentAsync(resource,"visitor-token","Corrida A",default);
+            var secondRace = race.CommentAsync(resource,"visitor-token","Corrida B",default);
+            try {
+                await raceHandler.MutationStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+                await Task.Delay(300);
+            }
+            finally { raceHandler.ReleaseMutations.TrySetResult(); }
+            await Task.WhenAll(firstRace,secondRace);
+            Assert(raceHandler.Topics==1 && raceHandler.Comments==2,"Concurrent first comments on a new resource create a single topic");
             await EndpointChecks(config,catalog,activity,folder);
             Console.WriteLine("Study OK: persistent votes, deduplication, concurrency, topic reuse/recovery, visitor credentials, corruption, authentication and CSRF.");
         }

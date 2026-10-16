@@ -64,6 +64,7 @@ Check(!unconfigured.Configured, "No token means unconfigured");
 settings["DISCUSSIONS_REPOSITORY"] = "https://evil.example/repo";
 using var invalid = new DiscussionsClient(new FakeFactory(handler), settings);
 Check(!invalid.Configured, "Reject malformed repository");
+await DiscussionConcurrencyChecks.Run();
 await ParticipationChecks.Run();
 await DiscussionChangeChecks.Run();
 await ContributorChecks.Run();
@@ -80,7 +81,7 @@ Console.WriteLine("Discussions OK: filtering, cursors, cache, thread, replies, m
 
 static void Check(bool condition, string name) { if (!condition) throw new Exception(name); }
 
-sealed class FakeFactory(FakeGitHub handler) : IHttpClientFactory
+sealed class FakeFactory(HttpMessageHandler handler) : IHttpClientFactory
 {
     public HttpClient CreateClient(string name) => new(handler, disposeHandler: false);
 }
