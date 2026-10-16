@@ -6,14 +6,20 @@ export async function checkContributionWizard({ send, evaluate, waitFor, navigat
   await waitFor(`!!document.querySelector('[role="progressbar"]')`);
   assert.equal(await evaluate(`document.querySelector('[data-slot="dialog-content"]').getBoundingClientRect().width`),896);
   const next = () => click(`[...document.querySelectorAll('[data-contribution-form] button')].find(b=>b.textContent.trim()==='Continuar')`);
-  const active = title => waitFor(`document.querySelector('[data-contribution-form] h2').textContent === ${JSON.stringify(title)}`);
+
+const active = title =>
+  waitFor(
+    `document.querySelector('[data-contribution-form] h2')?.textContent === ${JSON.stringify(title)}`
+  );
+
   const fill = async (name,value) => { await click(`document.querySelector('[data-contribution-form] input[name="${name}"], [data-contribution-form] textarea[name="${name}"]')`); await send('Input.insertText',{text:value}); };
   assert.equal(await evaluate(`document.querySelectorAll('[data-contribution-step]:not([hidden])').length`),1);
+
   await next(); await active('Tipo de instituição');
   await next();
-  assert.equal(await evaluate(`document.querySelector('[data-contribution-form] h2').textContent`),'Tipo de instituição');
   await selectOption('Tipo de instituição','Privada');
   await next(); await active('Link principal da faculdade');
+
   await next(); assert.equal(await evaluate(`!!document.querySelector('[data-contribution-form] [role="alert"]')`),true);
   await fill('url','https://example.org/wizard-university'); await next(); await active('Imagem'); await next(); await active('Nome da faculdade');
   await fill('name','Faculdade por etapas');
@@ -32,8 +38,18 @@ export async function checkContributionWizard({ send, evaluate, waitFor, navigat
   await click(`document.querySelector('[data-contribution-form] button[type="submit"]')`);
   await waitFor(`window.lastContribution?.name === 'Faculdade por etapas'`);
   assert.equal(await evaluate(`window.lastContribution.universityType`),'private');
-  await waitFor(`document.querySelector('[data-contribution-form] h2').textContent === 'Categoria do guia'`);
-  assert.equal(await evaluate(`document.querySelector('input[name="name"]').value`),'');
+
+await waitFor(`!document.querySelector('[data-slot="dialog-content"]')`);
+assert.equal(
+  await evaluate(`!!document.querySelector('[data-slot="dialog-content"]')`),
+  false
+  );
+
+assert.equal(
+  await evaluate(`window.lastContribution?.name`),
+  'Faculdade por etapas'
+);
+
   await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:false});
   assert.equal(await evaluate(`document.documentElement.scrollWidth<=innerWidth`),true);
   await send('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
