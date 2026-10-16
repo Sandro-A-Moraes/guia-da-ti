@@ -110,10 +110,11 @@ public sealed class DiscussionsClient(IHttpClientFactory clients, IConfiguration
         if (pending.TryGetValue(key, out var current) && current == task) pending.Remove(key);
     }
 
-    // Shared by several callers, so one caller giving up does not cancel the others; the client timeout bounds it.
+    // Shared by several callers, so one caller giving up does not cancel the others.
     private async Task<JsonElement> FetchAsync(string query, object variables)
     {
-        var cancellation = CancellationToken.None;
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var cancellation = timeout.Token;
         await gate.WaitAsync(cancellation);
         try
         {

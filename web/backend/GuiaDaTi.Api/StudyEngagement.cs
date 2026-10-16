@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.Antiforgery;
@@ -11,6 +12,7 @@ public sealed class StudyEngagement(IConfiguration configuration, IHostEnvironme
     private readonly string path = Path.GetFullPath(configuration["STUDY_ACTIVITY_PATH"]
         ?? Path.Combine(environment.ContentRootPath, "App_Data", "study-activity.json"));
     private readonly SemaphoreSlim gate = new(1, 1);
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> resourceGates = new();
     private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
     public Resource? Find(string type, string slug) => Types.Contains(type) ? catalog.Resources.FirstOrDefault(r => r.Type == type && r.Slug == slug) : null;
     public static string Key(Resource r) => r.Type + "/" + r.Slug;
@@ -82,10 +84,11 @@ public sealed class StudyEngagement(IConfiguration configuration, IHostEnvironme
         if (string.IsNullOrWhiteSpace(body) || body.Length > 9000) throw new ArgumentException("Escreva um comentário de até 9.000 caracteres.");
         if (resource.Demo) throw new ArgumentException("Itens de exemplo não recebem comentários.");
         if (!reader.Configured) throw new DiscussionsUnavailableException();
-        await gate.WaitAsync(cancellation);
+        var key = Key(resource);
+        var resourceGate = resourceGates.GetOrAdd(key, static _ => new SemaphoreSlim(1, 1));
+        await resourceGate.WaitAsync(cancellation);
         try {
-            var store = await ReadAsync(cancellation);
-            var entry = store.Items.GetValueOrDefault(Key(resource)) ?? new Entry();
+            var entry = await ReadEntryAsync(key, cancellation);
             entry.Discussion = resource.DiscussionNumber ?? entry.Discussion;
             if (entry.Discussion is int linked && await reader.ThreadAsync(linked, null, cancellation) is null)
                 entry.Discussion = null;
@@ -107,17 +110,43 @@ public sealed class StudyEngagement(IConfiguration configuration, IHostEnvironme
             }
             if (entry.Discussion is null) {
                 entry.Discussion = await writer.PublishAsync(token, new(TopicBody(resource), Title: TopicTitle(resource), CategoryName: configuration["STUDY_DISCUSSION_CATEGORY"] ?? "Geral"), cancellation);
-                store.Items[Key(resource)] = entry;
-                await WriteAsync(store, CancellationToken.None);
+                await UpdateEntryAsync(key, current => {
+                    current.Discussion = entry.Discussion;
+                    return current;
+                }, CancellationToken.None);
                 await reader.InvalidateAsync(CancellationToken.None);
             }
             var number = await writer.PublishAsync(token, new(body, Number: entry.Discussion), cancellation);
             entry.Discussion = number;
-            store.Items[Key(resource)] = entry;
             // Complete persistence even if the browser disconnects after GitHub accepted the write.
-            await WriteAsync(store, CancellationToken.None);
+            await UpdateEntryAsync(key, current => {
+                current.Discussion = entry.Discussion;
+                return current;
+            }, CancellationToken.None);
             await reader.InvalidateAsync(CancellationToken.None);
             return number;
+        }
+        finally { resourceGate.Release(); }
+    }
+
+    private async Task<Entry> ReadEntryAsync(string key, CancellationToken cancellation)
+    {
+        await gate.WaitAsync(cancellation);
+        try {
+            var store = await ReadAsync(cancellation);
+            return store.Items.GetValueOrDefault(key) ?? new Entry();
+        }
+        finally { gate.Release(); }
+    }
+
+    private async Task UpdateEntryAsync(string key, Func<Entry, Entry> apply, CancellationToken cancellation)
+    {
+        await gate.WaitAsync(cancellation);
+        try {
+            var store = await ReadAsync(cancellation);
+            var current = store.Items.GetValueOrDefault(key) ?? new Entry();
+            store.Items[key] = apply(current);
+            await WriteAsync(store, cancellation);
         }
         finally { gate.Release(); }
     }
