@@ -99,6 +99,14 @@ jobs:
           docker exec guia-deploy-smoke curl --fail --silent --retry 20 \
             --retry-all-errors --retry-delay 1 --max-time 5 http://127.0.0.1:8080/health
           docker exec guia-deploy-smoke curl --fail --silent --output /dev/null http://127.0.0.1:8080/
+          # Internal files must stay unreachable by URL and readable only by the app user.
+          docker exec guia-deploy-smoke curl --fail --silent --output /dev/null http://127.0.0.1:8080/api/community/users
+          docker exec guia-deploy-smoke bash -c 'set -euo pipefail
+            for path in App_Data/community-users.json App_Data/auth/keys App_Data/auth/sessions GuiaDaTi.Api.dll runtime.env; do
+              status=$(curl --silent --output /dev/null --write-out "%{http_code}" "http://127.0.0.1:8080/$path")
+              test "$status" = 404 || { echo "/$path returned HTTP $status"; exit 1; }
+            done
+            test "$(stat -c %a /app/App_Data/auth /app/App_Data/auth/keys /app/App_Data/auth/sessions | sort -u)" = 700'
           docker save "$image" | gzip > package/image.tar.gz
           cp deploy/compose.yml package/compose.yml
           printf '%s\n' "$image" > package/image.txt

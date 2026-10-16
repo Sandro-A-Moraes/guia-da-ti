@@ -18,14 +18,16 @@ public static class CommunityAuth
     {
         builder.Services.AddMemoryCache();
         builder.Services.TryAddSingleton(TimeProvider.System);
-        var keys = ServerTickets.CreatePrivateDirectory(Path.Combine(ServerTickets.StoragePath(builder.Configuration, builder.Environment), "keys"));
+        var storage = ServerTickets.CreatePrivateDirectory(ServerTickets.StoragePath(builder.Configuration, builder.Environment));
+        var keys = ServerTickets.CreatePrivateDirectory(Path.Combine(storage.FullName, "keys"));
         var protection = builder.Services.AddDataProtection().SetApplicationName("GuiaDaTi.CommunityAuth")
             .PersistKeysToFileSystem(keys);
         if (OperatingSystem.IsWindows()) protection.ProtectKeysWithDpapi();
         builder.Services.AddSingleton<ServerTickets>();
         builder.Services.AddSingleton<RegisteredUsers>();
-        builder.Services.AddAntiforgery(options => options.HeaderName = "X-CSRF-Token");
         var secure = builder.Environment.IsDevelopment() ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
+        builder.Services.AddAntiforgery(options => { options.HeaderName = "X-CSRF-Token"; options.Cookie.SecurePolicy = secure; });
+        builder.Services.AddHttpClient("github-oauth", client => client.Timeout = TimeSpan.FromSeconds(5));
         var auth = builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
             .AddCookie(options => {
                 options.Cookie.Name = "guia.session";
@@ -87,11 +89,36 @@ public static class CommunityAuth
                 && !returnUrl.Contains('\\') && !returnUrl.Any(char.IsControl) && !returnUrl.StartsWith("/api", StringComparison.OrdinalIgnoreCase);
             return Results.Challenge(new AuthenticationProperties { RedirectUri = local ? returnUrl : "/", IsPersistent = true }, ["GitHub"]);
         });
-        app.MapPost("/api/auth/logout", async (HttpContext context, IAntiforgery csrf) => {
+        app.MapPost("/api/auth/logout", async (HttpContext context, IAntiforgery csrf, IConfiguration config, IHttpClientFactory http, ILoggerFactory logs) => {
             try { await csrf.ValidateRequestAsync(context); }
             catch (AntiforgeryValidationException) { return Results.BadRequest(new { error = "Atualize a página e tente novamente." }); }
+            var token = await context.GetTokenAsync("access_token");
             await context.SignOutAsync();
+            if (Enabled(config) && !string.IsNullOrEmpty(token)) await RevokeAsync(token, config, http, logs.CreateLogger("CommunityAuth"));
             return Results.NoContent();
         });
+    }
+
+    // Logout also invalidates this session's token on GitHub. Other sessions keep their own tokens.
+    // Failures are only logged: the local session is already gone and the token expires when revoked on GitHub.
+    private static async Task RevokeAsync(string token, IConfiguration config, IHttpClientFactory http, ILogger logger)
+    {
+        var clientId = config["GITHUB_CLIENT_ID"]!;
+        using var request = new HttpRequestMessage(HttpMethod.Delete, $"https://api.github.com/applications/{Uri.EscapeDataString(clientId)}/token") {
+            Content = JsonContent.Create(new { access_token = token })
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Basic",
+            Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{clientId}:{config["GITHUB_CLIENT_SECRET"]}")));
+        request.Headers.Accept.ParseAdd("application/vnd.github+json");
+        request.Headers.UserAgent.ParseAdd("GuiaDaTi/1.0");
+        try {
+            using var response = await http.CreateClient("github-oauth").SendAsync(request, CancellationToken.None);
+            // 404 means GitHub already revoked the token.
+            if (!response.IsSuccessStatusCode && response.StatusCode != System.Net.HttpStatusCode.NotFound)
+                logger.LogWarning("GitHub token revocation failed with HTTP {StatusCode}.", (int)response.StatusCode);
+        }
+        catch (Exception error) {
+            logger.LogWarning("GitHub token revocation did not complete ({Error}).", error.GetType().Name);
+        }
     }
 }
