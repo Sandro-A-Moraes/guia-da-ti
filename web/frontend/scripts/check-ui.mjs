@@ -68,7 +68,7 @@ try {
   await checkStudy({send,evaluate,waitFor,navigate,click,selectOption});
   await checkStudyCuration({catalog,send,evaluate,waitFor,navigate,click});
   await checkUniversityFilter({catalog,send,evaluate,waitFor,navigate,click,selectOption});
-  await checkContributionWizard({send,evaluate,waitFor,navigate,click,selectOption});
+  await checkContributionWizard({send,evaluate,waitFor,navigate,click,selectOption,sleep});
   await checkContributionImages({send,evaluate,waitFor,navigate,click,selectOption});
   await checkScrollbarLayout({send,evaluate,waitFor,navigate,click,key});
   await checkCreatorCategories({send, evaluate, waitFor, navigate, click, selectOption});
@@ -80,7 +80,7 @@ try {
   await checkRouteFlash({send,evaluate,waitFor,navigate});
   assert.equal(await evaluate(`!!document.querySelector('main [aria-label="Patrocínio master"]')`), false);
   assert.equal(await evaluate(`!!document.querySelector('main #apoiadores')`), true);
-  assert.equal(await evaluate(`document.querySelector('main #apoiadores a[href="/sobre#apoiadores"]').textContent`), 'Conhecer os apoiadores');
+  assert.equal(await evaluate(`document.querySelector('main #apoiadores a[href="/sobre/#contato"]').textContent`), 'Apoie o Guia');
   assert.equal(await evaluate(`[...document.querySelectorAll('[data-slot="navigation-menu-trigger"]')].some(element => element.textContent.trim() === 'Projeto')`), false);
   assert.equal(await evaluate(`!!document.querySelector('[aria-label="Principal"] a[href="/sobre"]')`), true);
   for (const path of ['/apoiadores', '/apoiadores/']) {

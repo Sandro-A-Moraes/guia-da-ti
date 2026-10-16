@@ -66,6 +66,7 @@ using var invalid = new DiscussionsClient(new FakeFactory(handler), settings);
 Check(!invalid.Configured, "Reject malformed repository");
 await DiscussionConcurrencyChecks.Run();
 await ParticipationChecks.Run();
+await DiscussionPermissionChecks.Run();
 await DiscussionChangeChecks.Run();
 await ContributorChecks.Run();
 ActivityChecks.Run();

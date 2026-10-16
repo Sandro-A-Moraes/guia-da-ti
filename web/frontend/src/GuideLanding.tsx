@@ -61,7 +61,7 @@ export function GuideLanding({ dark }: { dark: boolean }) {
       </section>
     </section>
 
-    <section aria-labelledby="fale-com-o-guia" className="rounded-3xl border bg-card p-6 sm:p-8">
+    <section id="contato" aria-labelledby="fale-com-o-guia" className="scroll-mt-28 rounded-3xl border bg-card p-6 sm:p-8">
       <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="max-w-2xl space-y-2">
           <h2 id="fale-com-o-guia" className="text-2xl font-semibold tracking-tight">Fale com a gente</h2>

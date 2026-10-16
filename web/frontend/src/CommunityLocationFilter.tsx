@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Globe2, MapPin, RotateCcw } from 'lucide-react';
 import { WorldMap } from './WorldMap';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import map from './data/brazil-states.json';
 import { brazilRegions, toggleStates, type LocationSelection } from './community-location';
 
@@ -56,7 +57,7 @@ export function CommunityLocationFilter({ value, onChange }: { value: LocationSe
             aria-pressed={region.states.every(uf => selected.includes(uf))} onClick={() => onChange(toggleStates(value, region.states))}>{region.name}</Button>)}
         </div></fieldset>
         <details className="rounded-md border p-3"><summary className="cursor-pointer text-sm font-medium">Selecionar estados pela lista</summary><div className="mt-3 grid gap-2 sm:grid-cols-2">
-          {[...map.states].sort((a,b) => a.name.localeCompare(b.name, 'pt-BR')).map(state => <label key={state.uf} className="flex items-center gap-2 text-xs"><input type="checkbox" checked={selected.includes(state.uf)} onChange={() => onChange(toggleStates(value, [state.uf]))} />{state.name} ({state.uf})</label>)}
+          {[...map.states].sort((a,b) => a.name.localeCompare(b.name, 'pt-BR')).map(state => <div key={state.uf} className="flex items-center gap-2"><Checkbox id={'uf-' + state.uf} checked={selected.includes(state.uf)} onCheckedChange={() => onChange(toggleStates(value, [state.uf]))} /><label htmlFor={'uf-' + state.uf} className="cursor-pointer text-xs">{state.name} ({state.uf})</label></div>)}
         </div></details></>}
         <p aria-live="polite" className="text-sm text-muted-foreground">{value.scope === 'national' ? 'Selecionado: Brasil inteiro' : value.scope === 'international' ? 'Selecionado: internacionais' : selected.length ? 'Estados selecionados: ' + selected.join(', ') : 'Todas as localizações'}</p>
       </div>
