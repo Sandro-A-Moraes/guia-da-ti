@@ -48,6 +48,7 @@ O pipeline passou a conferir a imagem Docker antes de publicar. A verificação 
 - O cookie de sessão é `HttpOnly`, `SameSite=Lax` e exige HTTPS em produção. Ele vale por 7 dias e renova com o uso.
 - Todas as rotas de escrita exigem login e validam o cabeçalho `X-CSRF-Token`. A exceção é o registro de exibição de anúncios, que é anônimo e aceita só um recibo assinado.
 - O painel de anúncios confere o ID do GitHub configurado em `ADS_ADMIN_GITHUB_ID`.
+- Cada escrita no painel de anúncios gera uma linha de auditoria com ID da conta, ação, alvo, resultado e ID da requisição. Recusas por falta de permissão ou de CSRF também entram. O log não guarda o conteúdo do anúncio, endereços nem tokens. Veja [Registro de ações](publicidade.md#registro-de-ações).
 - O retorno do login aceita apenas caminhos locais. Endereços externos, `//`, barras invertidas e caracteres de controle são recusados.
 - O ID da sessão precisa ter 64 caracteres hexadecimais. Um ID não consegue apontar para fora da pasta de sessões.
 - Os logs de erro do GitHub registram operação, motivo, status HTTP e ID da requisição. Tokens, variáveis e o texto enviado ficam fora do log.

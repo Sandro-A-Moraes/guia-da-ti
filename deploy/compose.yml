@@ -9,6 +9,10 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_HTTP_PORTS: "8080"
       CATALOG_PATH: /app/catalog.json
+      # JSON logs keep audit fields (actor, action, requestId) searchable.
+      Logging__Console__FormatterName: json
+      Logging__Console__FormatterOptions__TimestampFormat: "yyyy-MM-ddTHH:mm:ssZ "
+      Logging__Console__FormatterOptions__UseUtcTimestamp: "true"
     ports:
       - "127.0.0.1:${APP_PORT:-5082}:8080"
     volumes:
