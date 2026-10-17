@@ -7,6 +7,7 @@ import {
   MessageSquareText,
   Star,
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -61,7 +62,7 @@ function useStudyActivity() {
       .catch(() => {
         if (!controller.signal.aborted) {
           setActivity({});
-          setError("A atividade dos itens não carregou. Tente novamente.");
+          setError("A atividade dos itens não carregou.");
         }
       })
       .finally(() => {
@@ -455,9 +456,9 @@ export function StudyDetail({ resource }: { resource: Resource }) {
             <p  className="text-xs text-destructive">{error} <Button 
                                                               type="button" 
                                                               size="xs" 
-                                                              variant="outline" 
-                                                              className="bg-transparente b-0 p-0 font-inherit inline underline cursor pointer border-none"
-                                                              onClick={refresh}>tentar novamente</Button>
+                                                              variant="link"
+                                                              className="p-0  underline cursor-pointer"
+                                                              onClick={refresh}>Tentar novamente.</Button>
             </p> 
           </div>)} 
           </div>}
@@ -517,7 +518,7 @@ export function StudyDetail({ resource }: { resource: Resource }) {
               <label htmlFor={id} className="text-sm font-medium">
                 Comente sua experiência
               </label>
-              <textarea
+              <Textarea
                 id={id}
                 required
                 maxLength={9000}
@@ -525,7 +526,6 @@ export function StudyDetail({ resource }: { resource: Resource }) {
                 onChange={(e) => setBody(e.target.value)}
                 rows={4}
                 disabled={busy || loading || !!error}
-                className="w-full rounded-lg border bg-transparent p-3 text-sm"
               />
               <p className="text-xs text-muted-foreground">
                 Seu comentário aparecerá no Guia e no GitHub com o nome de{" "}

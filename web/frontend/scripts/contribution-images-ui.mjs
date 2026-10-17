@@ -35,7 +35,18 @@ export async function checkContributionImages({send,evaluate,waitFor,navigate,cl
   assert.equal(await evaluate('window.lastImageUpload.name'), 'foto.png');
   assert.equal(await evaluate('window.lastContribution.imageUploadId'), '11111111111111111111111111111111.png');
   assert.equal(await evaluate('window.lastContribution.imageUrl'), undefined);
-  await waitFor(`!document.querySelector('[data-slot="dialog-content"]')`);
+   await waitFor(`document.querySelector('[data-contribution-form] h2')?.textContent === 'Categoria do guia'`);
+
+  assert.equal(
+    await evaluate(`!!document.querySelector('[data-slot="dialog-content"]')`),
+    true
+  );
+
+  assert.equal(
+    await evaluate(`document.querySelector('[data-contribution-form] input[name="name"]')?.value`),
+    ''
+  );
+
   assert.equal(await evaluate('location.href'), route);
   await evaluate(`sessionStorage.removeItem('participationMode')`);
   console.log('Contribution dialog OK: same route, upload credentials, metadata and dialog closure.');
