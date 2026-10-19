@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { Globe2, MapPin, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import map from './data/brazil-states.json';
+import type { BrazilStatesMap } from './brazil-states';
 import { brazilRegions, toggleStates, type LocationSelection } from './community-location';
-import { LazyLoad, retryableLazy } from './LazyLoad';
+import { LazyLoad, retryableImport, retryableLazy } from './LazyLoad';
 
-const WorldMap = retryableLazy(() => import('./WorldMap'), module => module.WorldMap);
+const WorldMap = retryableLazy(retryableImport(() => import('./WorldMap')), module => module.WorldMap);
 
-export function CommunityLocationFilter({ value, onChange }: { value: LocationSelection; onChange: (next: LocationSelection) => void }) {
+export function CommunityLocationFilter({ value, onChange, map }: { value: LocationSelection; onChange: (next: LocationSelection) => void; map: BrazilStatesMap }) {
   const [mode, setMode] = useState<'states' | 'regions'>('states');
   const [hovered, setHovered] = useState('');
   function select(uf: string, region: string) {

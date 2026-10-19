@@ -9,6 +9,7 @@ export async function checkLazyLoadFailure({ send, evaluate, waitFor, navigate, 
   const block = urls => send('Network.setBlockedURLs', { urls });
   // Some browsers keep the failed address in the module map, so the retry must request a new one.
   const retried = name => evaluate(`performance.getEntriesByType('resource').some(entry=>entry.name.includes('/assets/${name}-') && entry.name.includes('.js?retry='))`);
+  const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
   const before = errors.length;
   await send('Network.enable');
   try {
@@ -55,6 +56,53 @@ export async function checkLazyLoadFailure({ send, evaluate, waitFor, navigate, 
     await click(button('Aplicar filtros'));
     await waitFor(`!document.querySelector('[role="dialog"]')`);
     assert.equal(await evaluate(`new URLSearchParams(location.search).get('alcance')`), 'international');
+
+    // The state map is shared by the filter and the form. Its failure must also recover without a reload.
+    await navigate('/comunidades/');
+    await block(['*/assets/brazil-states-*']);
+    await click(filterButton);
+    await waitFor(`(${alert}).includes('Não foi possível carregar o filtro de localização')`);
+    assert.equal(await evaluate(pageIntact), true);
+    await block([]);
+    await click(button('Tentar novamente'));
+    await waitFor(`document.querySelectorAll('[role="dialog"] svg [data-uf]').length === 27`);
+    assert.equal(await retried('brazil-states'), true);
+    assert.equal(await evaluate(alert), '');
+
+    // A retry that fails while the chunk responds means the browser kept a failed dependency.
+    // Blocking only the retry addresses reproduces that state in any Chrome. The interface must lead to a reload that works.
+    const reloadMessage = 'o navegador precisa recarregar a página';
+    const reload = async expression => {
+      await evaluate('window.beforeReload = true');
+      await click(expression);
+      await sleep(1000);
+      await waitFor(`!window.beforeReload && document.readyState === 'complete' && !!document.querySelector('main h1')`);
+    };
+    await navigate('/comunidades/');
+    await block(['*/assets/CommunityLocationFilter-*']);
+    await click(filterButton);
+    await waitFor(`(${alert}).includes('Não foi possível carregar o filtro de localização')`);
+    await block(['*/assets/CommunityLocationFilter-*.js?retry=*']);
+    await click(button('Tentar novamente'));
+    await waitFor(`(${alert}).includes(${JSON.stringify(reloadMessage)})`);
+    assert.equal(await evaluate(`!${button('Tentar novamente')} && !!${button('Recarregar a página')}`), true);
+    assert.equal(await evaluate(pageIntact), true);
+    await block([]);
+    await reload(button('Recarregar a página'));
+    await click(filterButton);
+    await waitFor(`document.querySelectorAll('[role="dialog"] svg [data-uf]').length === 27`);
+
+    await navigate('/');
+    await block(['*/assets/ResourceContribution-*']);
+    await evaluate(contribute);
+    await waitFor(`(document.querySelector('[data-slot="dialog-content"] [role="alert"]')?.textContent || '').includes('Não foi possível carregar o formulário')`);
+    await block(['*/assets/ResourceContribution-*.js?retry=*']);
+    await evaluate(contribute);
+    await waitFor(`(document.querySelector('[data-slot="dialog-content"] [role="alert"]')?.textContent || '').includes(${JSON.stringify(reloadMessage)})`);
+    await block([]);
+    await reload(`[...document.querySelectorAll('[data-slot="dialog-content"] button')].find(button=>button.textContent.trim()==='Recarregar a página')`);
+    await evaluate(contribute);
+    await waitFor(`(document.querySelector('[data-slot="dialog-content"]')?.textContent || '').includes('Entre com o GitHub para sugerir')`);
   } finally {
     await block([]);
     await send('Network.disable');

@@ -3,10 +3,13 @@ import {Dialog} from 'radix-ui';
 import {SlidersHorizontal, X} from 'lucide-react';
 import {Button} from '@/components/ui/button';
 import {emptyLocationSelection,type LocationSelection} from './community-location';
-import {LazyLoad,retryableLazy} from './LazyLoad';
+import {LazyLoad,retryableImport,retryableLazy} from './LazyLoad';
+import {requestBrazilStates} from './brazil-states';
 
-// The maps only load when the dialog opens.
-const CommunityLocationFilter=retryableLazy(()=>import('./CommunityLocationFilter'),module=>module.CommunityLocationFilter);
+type FilterProps={value:LocationSelection;onChange:(next:LocationSelection)=>void};
+const requestFilter=retryableImport(()=>import('./CommunityLocationFilter'));
+// The maps only load when the dialog opens. The filter and the state map download in parallel, and each one retries on its own.
+const CommunityLocationFilter=retryableLazy(()=>Promise.all([requestFilter(),requestBrazilStates()]),([{CommunityLocationFilter:Filter},map])=>(props:FilterProps)=><Filter {...props} map={map} />);
 
 export function CommunityFiltersDialog({value,onChange}:{value:LocationSelection;onChange:(next:LocationSelection)=>void}) {
   const [open,setOpen]=useState(false);

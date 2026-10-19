@@ -10,6 +10,7 @@ import { CreatorAvatar, useCreatorProfile, followersLabel } from './CreatorProfi
 import { creatorCategories } from './creator-categories';
 import { universityTypes } from './university-options';
 import { categories, labels, taxonomy } from './catalog';
+import { requestBrazilStates } from './brazil-states';
 import { brazilRegions, type CommunityLocation } from './community-location';
 import { communityAudiences, communityCategoryOrder, communityModalities, communityPlatforms } from './community-options';
 import { Button } from '@/components/ui/button';
@@ -38,7 +39,7 @@ export function ResourceContribution({initialCategory = "", onSubmitted}: {initi
   useEffect(() => {
     if (communityScope !== 'regional' || brazilStates.length) return;
     let active = true;
-    void import('./data/brazil-states.json').then(({ default: map }) => {
+    void requestBrazilStates().then(map => {
       if (active) setBrazilStates([...map.states].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')));
     }).catch(() => { /* The region buttons still work without the state list. */ });
     return () => { active = false; };
