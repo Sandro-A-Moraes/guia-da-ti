@@ -72,6 +72,24 @@ public sealed class StudyEngagement(IConfiguration configuration, IHostEnvironme
         finally { gate.Release(); }
     }
 
+    public async Task<Dictionary<int, DiscussionResourceReference>> LinkedResourcesAsync(IEnumerable<int> numbers, CancellationToken cancellation)
+    {
+        var requested = numbers.Where(number => number > 0).ToHashSet();
+        if (requested.Count == 0) return [];
+        await gate.WaitAsync(cancellation);
+        try {
+            var store = await ReadAsync(cancellation);
+            var linked = new Dictionary<int, DiscussionResourceReference>();
+            foreach (var resource in catalog.Resources.Where(resource => Types.Contains(resource.Type))) {
+                var discussion = CurrentDiscussion(resource, store.Items.GetValueOrDefault(Key(resource)) ?? new Entry());
+                if (discussion is int number && requested.Contains(number))
+                    linked.TryAdd(number, new(resource.Type, resource.Slug, resource.Name));
+            }
+            return linked;
+        }
+        finally { gate.Release(); }
+    }
+
     private static int? CurrentDiscussion(Resource resource, Entry entry) =>
         entry.DiscussionOverride ? resource.DiscussionNumber : resource.DiscussionNumber ?? entry.Discussion;
 

@@ -3,7 +3,7 @@ import { Advertisement } from './Advertisement';
 import { PublicationActions } from './PublicationActions';
 import { ApproveContribution, Composer } from './Participation';
 import { DiscussionSkeleton } from './Loading';
-import { ArrowLeft, ArrowUpRight, ChevronDown, MessageSquareText, Plus, Search } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, ChevronDown, Link2, MessageSquareText, Plus, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,7 @@ import { LoadingImage } from './LoadingImage';
 
 type Category = { id: string; name: string };
 type PageInfo = { hasNextPage: boolean; endCursor: string | null };
-type Discussion = { number: number; title: string; preview: string; imageUrl?: string | null; category: Category; author: string; updatedAt: string; commentCount: number; isAnswered: boolean; locked: boolean; url: string };
+type Discussion = { number: number; title: string; preview: string; category: Category; author: string; updatedAt: string; commentCount: number; isAnswered: boolean; locked: boolean; url: string; linkedResource?: { type: string; slug: string; name: string } | null };
 type Comment = { id: string; author: string; avatarUrl: string | null; body: string; createdAt: string; isAnswer: boolean; isDeleted: boolean; replies: Comment[]; replyCount: number };
 type DiscussionList = { status: 'ready'; repositoryUrl: string; categories: Category[]; items: Discussion[]; pageInfo: PageInfo; totalCount?: number | null };
 type Thread = { status: 'ready'; discussion: Discussion; body: string; comments: Comment[]; pageInfo: PageInfo };
@@ -194,8 +194,7 @@ function DiscussionFeed() {
     {!ready ? <RequestState error={error} unconfigured={result?.status === 'unconfigured'} retry={retry} /> : <>
       {ready.items.length ? <ul className="divide-y border-y" aria-label="Conversas">{ready.items.map((discussion, index) => <Fragment key={discussion.number}><li>
         <article data-motion className="relative min-w-0 cursor-pointer space-y-2 px-1 py-4 transition-colors hover:bg-muted/30 focus-within:bg-muted/30">
-          {discussion.imageUrl && <LoadingImage src={discussion.imageUrl} alt={`Imagem de ${discussion.title}`} loading="lazy" className="mb-3 h-36 w-full overflow-hidden rounded-lg bg-muted" imageClassName="object-cover" />}
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground"><span className="font-medium text-foreground">{discussion.category.name}</span><span aria-hidden="true">·</span><span>{discussion.author}</span><span aria-hidden="true">·</span><DateLabel value={discussion.updatedAt} />{discussion.isAnswered && <Badge variant="secondary" className="text-[10px]">Respondida</Badge>}{discussion.locked && <Badge variant="outline" className="text-[10px]">Encerrada</Badge>}</div>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground"><span className="font-medium text-foreground">{discussion.category.name}</span><span aria-hidden="true">·</span><span>{discussion.author}</span><span aria-hidden="true">·</span><DateLabel value={discussion.updatedAt} />{discussion.isAnswered && <Badge variant="secondary" className="text-[10px]">Respondida</Badge>}{discussion.locked && <Badge variant="outline" className="text-[10px]">Encerrada</Badge>}{discussion.linkedResource && <Badge variant="outline" title={`Vinculado a ${discussion.linkedResource.name}`} className="text-[10px]"><Link2 aria-hidden="true" className="mr-1 size-3" />Vinculado: {discussion.linkedResource.name}</Badge>}</div>
           <h2 className="text-base font-semibold leading-snug sm:text-lg"><a className="rounded-sm hover:text-primary after:absolute after:inset-0 after:content-[''] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-ring [overflow-wrap:anywhere]" href={discussionUrl(discussion.number)}>{discussion.title}</a></h2>
           {discussion.preview && <p className="line-clamp-2 text-sm leading-relaxed text-muted-foreground [overflow-wrap:anywhere]">{discussion.preview}</p>}
           <Button asChild variant="secondary" size="xs" className="relative"><a href={discussionUrl(discussion.number)} aria-label={`${discussion.commentCount} comentários em ${discussion.title}`}><MessageSquareText aria-hidden="true" />{discussion.commentCount} {discussion.commentCount === 1 ? 'comentário' : 'comentários'}</a></Button>
@@ -215,7 +214,10 @@ export function Discussions({ className = '' }: { className?: string }) {
     setNumber(Number.isSafeInteger(parsed) && parsed > 0 && parsed <= 2147483647 ? parsed : null);
   }, []);
   return <section id="comunidade" aria-labelledby="discussions-title" className={`mx-auto max-w-4xl space-y-3 ${className}`}>
-    <h1 id="discussions-title" className="sr-only">Fórum do Guia da TI</h1>
+    <header className="space-y-2">
+      <h1 id="discussions-title" className="text-2xl font-semibold tracking-tight sm:text-3xl">Fórum da comunidade</h1>
+      <p className="text-sm text-muted-foreground">Tire dúvidas e troque experiências sobre tecnologia com a comunidade.</p>
+    </header>
     {number === undefined ? <DiscussionSkeleton /> : number ? <DiscussionThread number={number} /> : <DiscussionFeed />}
   </section>;
 }
