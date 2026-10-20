@@ -8,6 +8,16 @@ public static class DiscussionResourceLinkEndpoints
 {
     public static void MapDiscussionResourceLinks(this WebApplication app)
     {
+        app.MapGet("/api/discussions/{number:int}/resource-context", async (int number, HttpContext context, StudyEngagement activity) => {
+            context.Response.Headers.CacheControl = "no-store";
+            if (number < 1) return Results.BadRequest();
+            try {
+                var resource = await activity.LinkedResourceAsync(number, context.RequestAborted);
+                return Results.Ok(new { resource });
+            }
+            catch (Exception error) when (Unavailable(error)) { return Results.Json(new { error = "N\u00e3o foi poss\u00edvel carregar o recurso vinculado." }, statusCode: 503); }
+        });
+
         app.MapGet("/api/discussions/{number:int}/resource-link", async (int number, HttpContext context, DiscussionWriter writer, StudyEngagement activity) => {
             context.Response.Headers.CacheControl = "no-store";
             if (!Authenticated(context) || number < 1) return Results.Unauthorized();

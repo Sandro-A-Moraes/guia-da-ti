@@ -144,6 +144,7 @@ static class StudyChecks
             Assert((await http.PostAsJsonAsync("/api/study/books/book/vote",new {rating=5})).StatusCode==HttpStatusCode.Unauthorized,"Anonymous writes rejected");
             Assert((await http.PostAsJsonAsync("/api/study/books/book/comments",new {body="Texto"})).StatusCode==HttpStatusCode.Unauthorized,"Comments require visitor OAuth credential");
             Assert((await http.GetAsync("/api/discussions/7/resource-link")).StatusCode==HttpStatusCode.Unauthorized,"Resource link status requires sign-in");
+            var anonymousContext=await http.GetFromJsonAsync<JsonElement>("/api/discussions/7/resource-context");Assert(anonymousContext.GetProperty("resource").GetProperty("name").GetString()=="Livro","Anonymous visitors can read the resource context created with the discussion");
             (await http.GetAsync("/test/login")).EnsureSuccessStatusCode();
             Assert((await http.PostAsJsonAsync("/api/study/books/book/vote",new {rating=5})).StatusCode==HttpStatusCode.BadRequest,"Missing CSRF rejected");
             using var session=JsonDocument.Parse(await http.GetStringAsync("/api/auth/session"));
@@ -156,6 +157,7 @@ static class StudyChecks
             var linkStatus=await http.GetFromJsonAsync<JsonElement>("/api/discussions/7/resource-link");Assert(linkStatus.GetProperty("allowed").GetBoolean(),"Only repository maintainers can manage resource links");
             var linked=await http.PostAsJsonAsync("/api/discussions/7/resource-link",new {type="books",slug="book"});linked.EnsureSuccessStatusCode();
             Assert((await http.GetFromJsonAsync<JsonElement>("/api/discussions/7/resource-link")).GetProperty("resource").GetProperty("slug").GetString()=="book","Moderator link is visible to review");
+            var publicContext=await http.GetFromJsonAsync<JsonElement>("/api/discussions/7/resource-context");Assert(publicContext.GetProperty("resource").GetProperty("name").GetString()=="Livro","Anonymous visitors can read the linked resource context");
             Assert((await http.DeleteAsync("/api/discussions/7/resource-link")).StatusCode==HttpStatusCode.NoContent,"Moderator can remove a resource link without deleting the forum topic");
         }finally{await app.StopAsync();}
     }
