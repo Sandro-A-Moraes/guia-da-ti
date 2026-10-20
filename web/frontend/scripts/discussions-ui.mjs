@@ -47,7 +47,7 @@ export async function installDiscussionFixtures(send) {
       const category = { id: 'questions', name: 'Dúvidas' };
       const repositoryUrl = 'https://github.com/example/community/discussions';
       const secondPage = url.searchParams.has('after');
-      const discussion = { number: 7, title: 'Como começar em tecnologia?', preview: 'Compartilhe suas experiências e caminhos para quem está começando em tecnologia.', category, author: 'ana', updatedAt: '2026-10-05T12:00:00Z', commentCount: 2, isAnswered: true, locked: mode === 'locked', url: repositoryUrl + '/7' };
+      const discussion = { number: 7, title: 'Como começar em tecnologia?', preview: 'Compartilhe suas experiências e caminhos para quem está começando em tecnologia.', category, resourceCategory: 'jobs', author: 'ana', updatedAt: '2026-10-05T12:00:00Z', commentCount: 2, isAnswered: true, locked: mode === 'locked', url: repositoryUrl + '/7' };
       const comment = { id: 'comment-1', author: 'bia', body: 'Resposta de exemplo', createdAt: '2026-10-05T12:00:00Z', isAnswer: true, replies: [], replyCount: 0 };
       const pageInfo = { hasNextPage: !secondPage, endCursor: secondPage ? null : 'cursor-2' };
       if (url.pathname === '/api/discussions/404') return new Response('{}', { status: 404 });
@@ -74,6 +74,7 @@ export async function checkDiscussions({ send, evaluate, click, waitFor, navigat
   await mode('showcase');
   await navigate('/');
   await waitFor(`document.querySelectorAll('[aria-label="Conversas"] > li').length === 4`);
+  assert.equal(await evaluate(`document.querySelector('[aria-label="Conversas"]').textContent.includes('Sites de vagas')`), false);
   assert.equal(await evaluate(`!!document.querySelector('[aria-label="Publicidade"]').parentElement.previousElementSibling?.querySelector('article') && !!document.querySelector('[aria-label="Publicidade"]').parentElement.nextElementSibling?.querySelector('article')`), true);
   await mode('ready');
   await navigate('/');
@@ -89,6 +90,7 @@ export async function checkDiscussions({ send, evaluate, click, waitFor, navigat
   await waitFor(`document.querySelector('a[href*="conversa=7"]')?.textContent === 'Dúvida sobre JavaScript (continuação)'`);
   await click(`document.querySelector('[aria-label="Conversas"] article')`);
   await waitFor(`!!document.querySelector('[aria-label="Comentários"]')`);
+  assert.equal(await evaluate(`document.querySelector('main').textContent.includes('Sites de vagas')`), false);
   await waitFor(`!!document.querySelector('[aria-label="Publicidade"]').nextElementSibling`);
   assert.equal(await evaluate(`(()=>{const next=document.querySelector('[aria-label="Publicidade"]').nextElementSibling;return next.matches('button') || !!next.querySelector('button')})()`), true);
   await click(`document.querySelector('[aria-label="Comentários"] details > summary')`);
