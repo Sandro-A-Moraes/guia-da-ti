@@ -57,7 +57,6 @@ O workflow testa e gera uma imagem Docker antes de publicar na VPS por SSH. O pr
 - `VITE_DATA_REPOSITORY`: padrão `https://github.com/guia-da-ti/guia-da-ti-dados`.
 - `DISCUSSIONS_REPOSITORY`: repositório público das conversas, padrão `guia-da-ti/guia-da-ti-dados` (somente no backend).
 - `DISCUSSIONS_TOKEN`: credencial de leitura da API GraphQL do GitHub (somente no backend).
-- `CATALOG_TARGET_BRANCH`: branch que recebe PRs de contribuições, padrão `catalog-review`. Deve existir e ser diferente da branch principal.
 
 Frontend e backend devem usar o mesmo snapshot. Nunca coloque segredos em variáveis `VITE_*`.
 
@@ -162,6 +161,6 @@ Toda página válida, exceto o próprio formulário de contribuição, expõe um
 
 ### Sugestões e animações de entrada
 
-`POST /api/contributions` usa a credencial do visitante e valida CSRF. Criadores, YouTube e comunidades retornam `{kind:"catalog",url:"https://github.com/.../pull/..."}`: o servidor prepara o arquivo validado e abre um Pull Request, sem publicar Discussion nem invalidar a lista do fórum. Mantenedores usam um branch no catálogo. Visitantes usam uma cópia pública na própria conta, criada ou reutilizada após conferir a origem. A proposta parte da revisão atual do catálogo e preserva todos os metadados. Nenhuma proposta é mesclada automaticamente. As demais categorias retornam `{kind:"discussion",number:...}` e mantêm o fluxo de conversa e aprovação. Falhas preservam o formulário.
+`POST /api/contributions` usa a credencial do visitante e valida CSRF. Criadores, YouTube e comunidades abrem um Pull Request para `main` do catálogo, sem criar uma conversa no fórum. O servidor prepara o arquivo validado. Mantenedores usam uma branch do catálogo. Para visitantes, o servidor reutiliza ou cria uma cópia pública do catálogo e verifica a origem. Nenhum PR é mesclado automaticamente. As demais categorias viram conversas no fórum. Quando um mantenedor aprova uma sugestão, o Guia também abre um PR para `main`. O merge desse PR continua sob revisão dos mantenedores. Se houver falha, o formulário preserva os dados.
 
 O script público `theme.js`, carregado antes dos estilos, aplica o tema salvo e prepara a entrada das rotas. O GSAP revela o conteúdo em 450 ms. Componentes novos, diálogos e menus mantêm suas animações. Movimento reduzido exibe tudo imediatamente. Se o bundle não carregar, o conteúdo é liberado após 1,5 segundo. O teste de navegação registra quadros de entradas nos dois temas e verifica que a opacidade progride sem voltar a ocultar o conteúdo.

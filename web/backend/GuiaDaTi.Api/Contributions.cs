@@ -73,11 +73,7 @@ public sealed class ContributionService(IHttpClientFactory clients, IConfigurati
         using var client = clients.CreateClient("discussions");
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         client.DefaultRequestHeaders.UserAgent.ParseAdd("GuiaDaTi/1.0");
-        var repoResponse = await client.GetAsync(new Uri(api, $"repos/{owner}/{name}"), cancellation);
-        repoResponse.EnsureSuccessStatusCode();
-        using var repoJson = JsonDocument.Parse(await repoResponse.Content.ReadAsStringAsync(cancellation));
-        var defaultBranch = repoJson.RootElement.GetProperty("default_branch").GetString() ?? "main";
-        var targetBranch = CatalogTargetBranch.Resolve(configuration, defaultBranch);
+        var targetBranch = CatalogTargetBranch.Default;
         var branch = $"contributions/discussion-{number}";
         var refResponse = await client.GetAsync(new Uri(api, $"repos/{owner}/{name}/git/ref/heads/{CatalogTargetBranch.ApiRef(targetBranch)}"), cancellation);
         refResponse.EnsureSuccessStatusCode();

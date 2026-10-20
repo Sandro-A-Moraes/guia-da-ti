@@ -9,7 +9,7 @@ static class CatalogProposalChecks
     {
         var catalog = new Catalog(1, new(["geral"], [], ["pt-BR"], ["creators", "youtube", "communities", "courses", "universities"]), []);
         var settings = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> {
-            ["DISCUSSIONS_REPOSITORY"] = "example/catalog", ["DISCUSSIONS_TOKEN"] = "read-only-token"
+            ["DISCUSSIONS_REPOSITORY"] = "example/catalog", ["DISCUSSIONS_TOKEN"] = "read-only-token", ["CATALOG_TARGET_BRANCH"] = "catalog-review"
         }).Build();
         foreach (var type in new[] { "creators", "youtube", "communities" }) {
             foreach (var mode in new[] { "existing-fork", "new-fork", "maintainer" }) {
@@ -31,6 +31,7 @@ static class CatalogProposalChecks
                 Check(handler.Resource.GetProperty("imageUrl").GetString() == draft.ImageUrl, "Preserve image URL in catalog proposals");
                 if (type is "creators" or "youtube") Check(handler.Resource.GetProperty("creatorCategories").EnumerateArray().Select(item => item.GetString()).SequenceEqual(new[] { "career", "humor" }), "Preserve creator categories in GitHub JSON");
                 Check(handler.PullHead.StartsWith(mode == "maintainer" ? "example:contributions/" : "ana:contributions/"), "Open upstream PR from writable branch");
+                Check(handler.PullBase == "main" && handler.RequestedRef == "main", "Catalog PR and source branch use main");
                 if (type == "communities") Check(handler.Resource.GetProperty("communityLocation").GetProperty("scope").GetString() == "national"
                     && handler.Resource.GetProperty("communityPlatforms")[0].GetString() == "discord"
                     && handler.Resource.GetProperty("communityAudience").GetString()=="general"
@@ -90,8 +91,8 @@ static class CatalogProposalChecks
                 using var handler = new ProposalGitHub {Mode=mode};
                 var service = new ContributionService(new ProposalFactory(handler), settings, images);
                 await service.Submit("user-token", new("creators", "Perfil com imagem", "https://example.org/profile", "Resumo do perfil com imagem", "Descrição do perfil com imagem", ["geral"], [], ["pt-BR"], CreatorCategories:["career"], ImageUploadId:id), catalog, default);
-                Check(handler.ImageBytes!.SequenceEqual(png) && handler.ImageBranch == handler.ResourceBranch, "Image and resource published in same review branch");
-                Check(handler.UserTokenOnly && handler.Resource.GetProperty("imageUrl").GetString() == $"https://raw.githubusercontent.com/example/catalog/catalog-review/assets/images/perfil-com-imagem-{id}", "Image uses visitor credential and canonical public URL");
+                Check(handler.ImageBytes!.SequenceEqual(png) && handler.ImageBranch == handler.ResourceBranch, "Image and resource published in same contribution branch");
+                Check(handler.UserTokenOnly && handler.Resource.GetProperty("imageUrl").GetString() == $"https://raw.githubusercontent.com/example/catalog/main/assets/images/perfil-com-imagem-{id}", "Image uses visitor credential and canonical public URL");
                 Check(!handler.Resource.TryGetProperty("imageUploadId", out _), "Pending image ID stays out of public catalog");
             }
             using (var handler = new ProposalGitHub()) {
@@ -123,7 +124,7 @@ sealed class ProposalGitHub : HttpMessageHandler
 {
     public byte[]? ImageBytes;
     public string ImageBranch = "", ResourceBranch = "";
-    public string Mode = "existing-fork", FileTarget = "", PullHead = "";
+    public string Mode = "existing-fork", FileTarget = "", PullHead = "", PullBase = "", RequestedRef = "";
     public int Forks, Discussions, Writes;
     public bool UserTokenOnly = true;
     public JsonElement Resource;
@@ -149,7 +150,7 @@ sealed class ProposalGitHub : HttpMessageHandler
             return Response(new { @private = false, fork = true, source = new { full_name = Mode == "wrong-fork" ? "other/catalog" : "example/catalog" } });
         }
         if (path == "/repos/example/catalog/forks") { Forks++; return Response(new { full_name = "ana/catalog" }, HttpStatusCode.Accepted); }
-        if (path.Contains("/git/ref/heads/")) return Response(new { @object = new { sha = "upstream-sha" } });
+        if (path.Contains("/git/ref/heads/")) { RequestedRef = path.Split("/git/ref/heads/")[1]; return Response(new { @object = new { sha = "upstream-sha" } }); }
         if (path.EndsWith("/git/refs")) {
             using var payload = JsonDocument.Parse(await request.Content!.ReadAsStringAsync(cancellation));
             if (payload.RootElement.GetProperty("sha").GetString() != "upstream-sha") throw new Exception("Fork branch does not start from current upstream");
@@ -172,6 +173,7 @@ sealed class ProposalGitHub : HttpMessageHandler
         if (path == "/repos/example/catalog/pulls") {
             using var payload = JsonDocument.Parse(await request.Content!.ReadAsStringAsync(cancellation));
             PullHead = payload.RootElement.GetProperty("head").GetString()!;
+            PullBase = payload.RootElement.GetProperty("base").GetString()!;
             return Response(new { html_url = "https://github.com/example/catalog/pull/10" }, HttpStatusCode.Created);
         }
         throw new Exception("Unexpected GitHub request: " + request.Method + " " + path);
