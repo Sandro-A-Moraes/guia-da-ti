@@ -28,7 +28,7 @@ export function ResourceContribution({initialCategory = "", onSubmitted}: {initi
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [successUrl, setSuccessUrl] = useState('');
-  const [successLinkLabel, setSuccessLinkLabel] = useState('Abrir conversa');
+  const successLinkLabel = 'Acompanhar PR';
   const [type, setType] = useState(initialCategory);
   const [area, setArea] = useState('');
   const [languages, setLanguages] = useState<string[]>(['pt-BR']);
@@ -64,7 +64,6 @@ export function ResourceContribution({initialCategory = "", onSubmitted}: {initi
   useEffect(() => { if (!imageFile) { setImagePreview(''); return; } const objectUrl = URL.createObjectURL(imageFile); setImagePreview(objectUrl); return () => URL.revokeObjectURL(objectUrl); }, [imageFile]);
   const creatorCategory = type === 'creators' || type === 'youtube';
   const copy = contributionCopy(type);
-  const catalogOnly = creatorCategory || type === 'communities';
   const lookup = useCreatorProfile(url, creatorCategory && !!session?.login);
   useEffect(() => {
     if (!lookup.profile) return;
@@ -97,14 +96,10 @@ export function ResourceContribution({initialCategory = "", onSubmitted}: {initi
       const response = await fetch('/api/contributions', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': session.csrfToken }, body: JSON.stringify({...submission, ...(imageUploadId ? {imageUploadId} : imageUrl.trim() ? {imageUrl:imageUrl.trim()} : {})}) });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw Error(result.error || 'Não foi possível enviar a contribuição.');
-      if (result.kind === 'catalog' && result.url) {
-        setSuccess('Sugestão enviada para revisão dos mantenedores. O cadastro aparece no guia após a aprovação.');
-        setSuccessUrl(result.url); setSuccessLinkLabel('Acompanhar revisão');
-      } else {
-        setSuccess(`Sugestão enviada! A conversa #${result.number} já está aberta para comentários.`);
-        setSuccessUrl(`/?conversa=${result.number}`); setSuccessLinkLabel('Abrir conversa');
-      }
-      notify(result.notice ?? { id: crypto.randomUUID(), login: session.login, name: proposal.name, category: proposal.type, url: result.kind === 'catalog' ? result.url : `/?conversa=${result.number}` });
+      if (typeof result.url !== 'string') throw Error('O GitHub não retornou o link do PR. Confira seus Pull Requests antes de enviar novamente.');
+      setSuccess('PR aberto para revisão. O cadastro entra no guia após o merge e a publicação do catálogo.');
+      setSuccessUrl(result.url);
+      notify(result.notice ?? { id: crypto.randomUUID(), login: session.login, name: proposal.name, category: proposal.type, url: result.url });
       formElement.reset(); setType(''); setArea(''); setLanguages(['pt-BR']); setTechnologies([]);
       setUrl(''); setName(''); setSummary(''); setDescription('');
       setCommunityScope(''); setCommunityStates([]);
@@ -115,7 +110,7 @@ export function ResourceContribution({initialCategory = "", onSubmitted}: {initi
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Não foi possível enviar a contribuição.'); }
     finally { setBusy(false); }
   }
-  if (!session?.login) return <div className="space-y-3 rounded-lg border p-5"><p>Entre com o GitHub para sugerir um recurso. Criadores e comunidades passam por revisão do catálogo. As outras sugestões abrem uma conversa no fórum.</p><LoginButton /></div>;
+  if (!session?.login) return <div className="space-y-3 rounded-lg border p-5"><p>Entre com o GitHub para enviar uma sugestão. Cada envio abre um PR para revisão dos mantenedores.</p><LoginButton /></div>;
   return <ContributionWizard preview={<ContributionPreview name={name} summary={summary} description={description} category={typeNames[type] || type} area={labels[area] || area} languages={languages} image={imagePreview || imageUrl} url={url} details={[
       ['Tecnologias', technologies.map(id => labels[id] || id).join(', ')],
       ['Tipo de instituição', type === 'universities' ? universityTypes.find(item => item.id === universityType)?.name || '' : ''],
@@ -175,8 +170,8 @@ export function ResourceContribution({initialCategory = "", onSubmitted}: {initi
     {type === 'communities' ? <div data-step-title="Categoria da comunidade"><ComboboxField label="Categoria da comunidade" name="area" value={area} onChange={setArea} disabled={busy} options={[...communityCategoryOrder, ...taxonomy.areas.filter(id=>!communityCategoryOrder.includes(id))].map(id=>({id,name:labels[id]||id}))} /></div> : <SelectField label="Assunto principal" name="area" required value={area} onChange={setArea} placeholder="Escolha um assunto" options={taxonomy.areas.map(id => ({id, name:labels[id] || id}))} />}
     <fieldset className="space-y-2"><legend className="text-sm font-medium">Tecnologias (opcional)</legend><div className="flex flex-wrap gap-4">{taxonomy.technologies.map((technology: string) => <Label key={technology} className="flex items-center gap-2 text-sm"><Checkbox checked={technologies.includes(technology)} onCheckedChange={checked => setTechnologies(current => checked === true ? [...current, technology] : current.filter(item => item !== technology))} />{labels[technology] || technology}</Label>)}</div></fieldset>
     <fieldset className="space-y-2"><legend className="text-sm font-medium">Idiomas disponíveis</legend><div className="flex flex-wrap gap-4">{taxonomy.languages.map((language: string) => <Label key={language} className="flex items-center gap-2 text-sm"><Checkbox checked={languages.includes(language)} onCheckedChange={checked => setLanguages(current => checked === true ? [...current, language] : current.filter(item => item !== language))} />{language}</Label>)}</div></fieldset>
-    <div data-step-title="Revisar e enviar" className="space-y-5"><dl className="grid gap-4 text-sm sm:grid-cols-2">{[['Categoria',typeNames[type] || type],[copy.name,name],[copy.url,url],[copy.summary,summary],[copy.description,description],['Assunto',labels[area] || area],['Idiomas',languages.join(', ')]].map(([label,value])=><div key={label} className="min-w-0 space-y-1"><dt className="text-xs text-muted-foreground">{label}</dt><dd className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{value || 'Não informado'}</dd></div>)}</dl><p className="text-xs text-muted-foreground">{catalogOnly ? 'Os mantenedores revisam sua sugestão antes de incluí-la no catálogo. Criadores e comunidades não abrem tópicos no fórum. Para enviar a proposta, o GitHub pode criar uma cópia do catálogo na sua conta.' : 'Sua sugestão abre um tópico em Ideias para a comunidade comentar. Depois da revisão, um mantenedor prepara o cadastro para o catálogo.'}</p>
-    <Button type="submit" disabled={busy || !type || !area || !languages.length || type === 'universities' && !universityType || creatorCategory && !creatorCategoryIds.length || type === 'communities' && (!communityAudience || !communityScope || communityScope === 'regional' && !communityStates.length || !communityModality || !communityPlatformIds.length || communityPlatformIds.some(id=>!communityUrls[id]?.trim()))}>{busy ? 'Enviando…' : catalogOnly ? 'Enviar para revisão' : 'Enviar sugestão e abrir conversa'}</Button>
+    <div data-step-title="Revisar e enviar" className="space-y-5"><dl className="grid gap-4 text-sm sm:grid-cols-2">{[['Categoria',typeNames[type] || type],[copy.name,name],[copy.url,url],[copy.summary,summary],[copy.description,description],['Assunto',labels[area] || area],['Idiomas',languages.join(', ')]].map(([label,value])=><div key={label} className="min-w-0 space-y-1"><dt className="text-xs text-muted-foreground">{label}</dt><dd className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{value || 'Não informado'}</dd></div>)}</dl><p className="text-xs text-muted-foreground">Sua sugestão abre um PR para revisão dos mantenedores. O fórum continua separado para conversas. O cadastro entra no guia após o merge e a publicação do catálogo.</p>
+    <Button type="submit" disabled={busy || !type || !area || !languages.length || type === 'universities' && !universityType || creatorCategory && !creatorCategoryIds.length || type === 'communities' && (!communityAudience || !communityScope || communityScope === 'regional' && !communityStates.length || !communityModality || !communityPlatformIds.length || communityPlatformIds.some(id=>!communityUrls[id]?.trim()))}>{busy ? 'Enviando…' : 'Enviar para revisão'}</Button>
     </div>
   </ContributionWizard>;
 }

@@ -7,11 +7,12 @@ static class CatalogProposalChecks
 {
     public static async Task Run()
     {
-        var catalog = new Catalog(1, new(["geral"], [], ["pt-BR"], ["creators", "youtube", "communities", "courses", "universities"]), []);
+        var types = new[] { "courses", "platforms", "universities", "bootcamps", "roadmaps", "books", "certifications", "news", "blogs", "newsletters", "podcasts", "youtube", "creators", "articles", "tutorials", "studies", "case-studies", "reports", "communities", "events", "meetups", "conferences", "hackathons", "tools", "open-source", "challenges", "labs", "jobs", "scholarships", "mentoring", "volunteering" };
+        var catalog = new Catalog(1, new(["geral"], [], ["pt-BR"], types), []);
         var settings = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> {
             ["DISCUSSIONS_REPOSITORY"] = "example/catalog", ["DISCUSSIONS_TOKEN"] = "read-only-token", ["CATALOG_TARGET_BRANCH"] = "catalog-review"
         }).Build();
-        foreach (var type in new[] { "creators", "youtube", "communities" }) {
+        foreach (var type in types) {
             foreach (var mode in new[] { "existing-fork", "new-fork", "maintainer" }) {
                 using var handler = new ProposalGitHub { Mode = mode };
                 var service = new ContributionService(new ProposalFactory(handler), settings);
@@ -20,16 +21,18 @@ static class CatalogProposalChecks
                     CreatorCategories: type is "creators" or "youtube" ? ["career", "humor"] : null,
                     CommunityLocation: type == "communities" ? new("national") : null,
                     CommunityPlatforms: type == "communities" ? ["discord","website"] : null, CommunityModality: type == "communities" ? "online" : null,
-                    CommunityAudience:type=="communities"?"general":null,CommunityLinks:type=="communities"?[new("discord","https://discord.gg/example"),new("website","https://example.org/new")]:null,CommunityMembers:type=="communities"?new(4000,"2026-10-07",true):null);
+                    CommunityAudience:type=="communities"?"general":null,CommunityLinks:type=="communities"?[new("discord","https://discord.gg/example"),new("website","https://example.org/new")]:null,CommunityMembers:type=="communities"?new(4000,"2026-10-07",true):null,
+                    UniversityType:type=="universities"?"public":null);
                 var result = await service.Submit("user-token", draft, catalog, default);
-                Check(result.Kind == "catalog" && result.Number is null && result.Url == "https://github.com/example/catalog/pull/10", "Catalog review result");
-                Check(handler.Discussions == 0, "No forum operation for creator/community");
+                Check(result.Url == "https://github.com/example/catalog/pull/10", "Every category returns the catalog PR");
+                Check(handler.Discussions == 0, "Every category skips forum publication");
                 Check(handler.UserTokenOnly, "Uses visitor credentials exclusively");
                 Check(handler.Forks == (mode == "new-fork" ? 1 : 0), "Reuse fork or write as maintainer");
                 Check(handler.FileTarget == $"/repos/{(mode == "maintainer" ? "example" : "ana")}/catalog/contents/data/{type}/novo-cadastro.json", "Catalog file target");
                 Check(handler.Resource.GetProperty("type").GetString() == type && handler.Resource.GetProperty("areas")[0].GetString() == "geral", "Preserve validated resource");
                 Check(handler.Resource.GetProperty("imageUrl").GetString() == draft.ImageUrl, "Preserve image URL in catalog proposals");
                 if (type is "creators" or "youtube") Check(handler.Resource.GetProperty("creatorCategories").EnumerateArray().Select(item => item.GetString()).SequenceEqual(new[] { "career", "humor" }), "Preserve creator categories in GitHub JSON");
+                if (type == "universities") Check(handler.Resource.GetProperty("universityType").GetString() == "public", "Preserve university type in GitHub JSON");
                 Check(handler.PullHead.StartsWith(mode == "maintainer" ? "example:contributions/" : "ana:contributions/"), "Open upstream PR from writable branch");
                 Check(handler.PullBase == "main" && handler.RequestedRef == "main", "Catalog PR and source branch use main");
                 if (type == "communities") Check(handler.Resource.GetProperty("communityLocation").GetProperty("scope").GetString() == "national"
@@ -47,11 +50,6 @@ static class CatalogProposalChecks
             catch (ContributionRejectedException) { }
             Check(handler.FileTarget == "" && handler.Writes == 0, "No writes to private or unrelated repository");
         }
-        using (var handler = new ProposalGitHub()) {
-            var service = new ContributionService(new ProposalFactory(handler), settings);
-            var result = await service.Submit("user-token", new("courses", "Novo curso", "https://example.org/course", "Um resumo do curso", "Uma descrição do curso", ["geral"], [], ["pt-BR"]), catalog, default);
-            Check(result.Kind == "discussion" && result.Number == 8 && handler.FileTarget == "", "Other suggestions keep forum flow");
-        }
         foreach (var type in new[] { "creators", "youtube" }) {
             foreach (var invalid in new string[]?[] { null, [], ["unknown"], ["career", "career"], ["career", null!] }) {
                 using var handler = new ProposalGitHub();
@@ -68,10 +66,8 @@ static class CatalogProposalChecks
             using var handler = new ProposalGitHub();
             var service = new ContributionService(new ProposalFactory(handler), settings);
             await service.Submit("user-token", new("universities", "Nova faculdade", "https://example.org/university", "Um resumo da faculdade", "Uma descrição da faculdade", ["geral"], [], ["pt-BR"], UniversityType: institution), catalog, default);
-            var match = System.Text.RegularExpressions.Regex.Match(handler.DiscussionBody, @"<!-- guia-da-ti:resource:v1:([A-Za-z0-9+/=]+) -->");
-            var resource = JsonSerializer.Deserialize<ContributionResource>(Encoding.UTF8.GetString(Convert.FromBase64String(match.Groups[1].Value)), new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
-            Check(resource.UniversityType == institution && resource.ToDraft().UniversityType == institution, "Institution type survives suggestion and approval round trip");
-            Check(handler.DiscussionBody.Contains(institution == "public" ? "Pública" : "Privada"), "Show institution type to reviewers");
+            Check(handler.Resource.GetProperty("universityType").GetString() == institution, "University type survives direct PR creation");
+            Check(handler.PullBase == "main" && handler.Discussions == 0, "University suggestion opens a PR without a forum topic");
         }
         foreach (var invalid in new (string Type, string? Institution)[] { ("universities", null), ("universities", ""), ("universities", "unknown"), ("courses", "public") }) {
             using var handler = new ProposalGitHub();
@@ -98,9 +94,8 @@ static class CatalogProposalChecks
             using (var handler = new ProposalGitHub()) {
                 var service = new ContributionService(new ProposalFactory(handler), settings, images);
                 await service.Submit("user-token", new("courses", "Curso com imagem", "https://example.org/course", "Resumo do curso com imagem", "Descrição do curso com imagem", ["geral"], [], ["pt-BR"], ImageUploadId:id), catalog, default);
-                var match = System.Text.RegularExpressions.Regex.Match(handler.DiscussionBody, @"<!-- guia-da-ti:resource:v1:([A-Za-z0-9+/=]+) -->");
-                var resource = JsonSerializer.Deserialize<ContributionResource>(Encoding.UTF8.GetString(Convert.FromBase64String(match.Groups[1].Value)), new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
-                Check(resource.ToDraft().ImageUploadId == id, "Uploaded image survives forum approval round trip");
+                Check(handler.ImageBytes!.SequenceEqual(png) && handler.Resource.GetProperty("imageUrl").GetString() == $"https://raw.githubusercontent.com/example/catalog/main/assets/images/curso-com-imagem-{id}", "Uploaded image is included in the direct PR");
+                Check(handler.PullBase == "main" && handler.Discussions == 0, "Course image submission skips the forum");
             }
             foreach (var bytes in new[] {Array.Empty<byte>(), new byte[ContributionImages.MaximumBytes + 1], System.Text.Encoding.UTF8.GetBytes("<svg>image</svg>")}) {
                 try { await images.Save(bytes, default); throw new Exception("Accepted invalid image"); } catch (ContributionRejectedException) { }
@@ -113,7 +108,7 @@ static class CatalogProposalChecks
             try { await service.Submit("user-token", saved.ToDraft() with {ImageUrl=imageUrl}, catalog, default); throw new Exception("Accepted unsafe image URL"); } catch (ContributionRejectedException) { }
             Check(handler.Writes == 0, "Reject invalid image before GitHub access");
         }
-        Console.WriteLine("Catalog proposals OK: creators, YouTube and communities bypass the forum; visitor credentials, forks, permissions, metadata and other suggestions verified.");
+        Console.WriteLine("Catalog proposals OK: every category opens a PR to main; visitor credentials, forks, permissions, metadata and images verified.");
     }
     static void Check(bool condition, string name) { if (!condition) throw new Exception(name); }
 }

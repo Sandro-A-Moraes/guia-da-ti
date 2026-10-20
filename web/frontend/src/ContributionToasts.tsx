@@ -46,7 +46,7 @@ export function ContributionToasts({ children }: { children: ReactNode }) {
       <div className="min-w-0 flex-1 space-y-1">
         <Toast.Title className="break-words text-xs font-medium sm:text-sm">{notice.login} adicionou {notice.name} em {notice.category === 'creators' ? 'Criadores' : categories.find(c => c.id === notice.category)?.name ?? notice.category}</Toast.Title>
         <Toast.Description className="text-[11px] text-muted-foreground sm:text-xs">Sugestão enviada para revisão</Toast.Description>
-        <a href={notice.url} className="inline-block text-[11px] text-primary underline underline-offset-4 sm:text-xs">Acompanhar sugestão</a>
+        <a href={notice.url} className="inline-block text-[11px] text-primary underline underline-offset-4 sm:text-xs">Acompanhar PR</a>
       </div>
       <Toast.Close aria-label="Fechar aviso" className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring"><X className="size-3.5 sm:size-4" /></Toast.Close>
     </Toast.Root>)}
