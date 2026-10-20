@@ -10,7 +10,7 @@ public sealed class ContributionNotifications(TimeProvider clock)
     {
         lock (gate) {
             var notice = new ContributionNotice($"{stream}:{++cursor}", login, draft.Name.Trim(), draft.Type,
-                result.Kind == "catalog" ? result.Url! : $"/?conversa={result.Number}");
+                result.Url);
             events.Enqueue((cursor, clock.GetUtcNow(), notice));
             while (events.Count > 100) events.Dequeue();
             return notice;

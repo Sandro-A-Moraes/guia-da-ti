@@ -368,7 +368,7 @@ try {
   assert.deepEqual(await evaluate(`window.lastContribution.communityLinks`),[{platform:'discord',url:'https://discord.gg/example'},{platform:'website',url:'https://example.org/new-community'}]);
   assert.equal(await evaluate(`window.lastContribution.communityModality`), 'online');
   await waitFor(`!!document.querySelector('[data-contribution-form] a[href="https://github.com/guia-da-ti/guia-da-ti-dados/pull/10"]')`);
-  assert.equal(await evaluate(`document.querySelector('[data-contribution-form] a[href="https://github.com/guia-da-ti/guia-da-ti-dados/pull/10"]').textContent`),'Acompanhar revisão');
+  assert.equal(await evaluate(`document.querySelector('[data-contribution-form] a[href="https://github.com/guia-da-ti/guia-da-ti-dados/pull/10"]').textContent`),'Acompanhar PR');
   assert.equal(await evaluate(`document.querySelector('main').textContent.includes('A conversa #10')`),false);
   await navigate('/contribuir/?categoria=communities');
   await waitFor(`document.querySelector('[role="combobox"][aria-label="Categoria do guia"]')?.textContent.includes('Comunidade')`);

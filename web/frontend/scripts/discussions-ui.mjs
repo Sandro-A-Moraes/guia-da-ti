@@ -28,8 +28,8 @@ export async function installDiscussionFixtures(send) {
       if (url.pathname === '/api/contributions') {
         window.lastContribution = JSON.parse(options.body);
         if (sessionStorage.getItem('participationMode') === 'error') return Response.json({error:'Envio recusado.'},{status:403});
-        const result=['creators','youtube','communities'].includes(window.lastContribution.type)?{kind:'catalog',url:'https://github.com/guia-da-ti/guia-da-ti-dados/pull/10'}:{kind:'discussion',number:10};
-        const notice={id:'test:'+window.noticeItems.length,login:'ana',name:window.lastContribution.name,category:window.lastContribution.type,url:result.url||'/?conversa=10'};
+        const result={url:'https://github.com/guia-da-ti/guia-da-ti-dados/pull/10'};
+        const notice={id:'test:'+window.noticeItems.length,login:'ana',name:window.lastContribution.name,category:window.lastContribution.type,url:result.url};
         window.noticeItems.push(notice);
         return Response.json({...result,notice});
       }

@@ -80,7 +80,7 @@ export const guideSteps = [
   {
     id: 'contribute', label: 'Indique algo que vale conhecer', category: 'Contribua',
     description: 'Use o botão de sugestão da seção. Preencha as etapas, adicione uma imagem e confira a prévia antes de enviar.',
-    tip: 'Os mantenedores revisam os cadastros. Criadores e comunidades vão para revisão do catálogo. As demais sugestões abrem uma conversa no fórum.',
+    tip: 'Todas as sugestões abrem um PR para revisão dos mantenedores. O fórum continua separado para conversas.',
     action: 'Enviar uma sugestão', href: '/?sugerir=',
   },
 ] as const satisfies readonly GuideStep[];
