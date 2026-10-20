@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { resources, resourcePath } from './catalog';
+import { categories, labels, resources, resourcePath } from './catalog';
 import { DiscussionBody } from './DiscussionBody';
 import { LoadingImage } from './LoadingImage';
 
@@ -20,8 +20,35 @@ type Comment = { id: string; author: string; avatarUrl: string | null; body: str
 type DiscussionList = { status: 'ready'; repositoryUrl: string; categories: Category[]; items: Discussion[]; pageInfo: PageInfo; totalCount?: number | null };
 type Thread = { status: 'ready'; discussion: Discussion; body: string; comments: Comment[]; pageInfo: PageInfo };
 type ResourceLink = { type: string; slug: string; name: string };
+type DiscussionResource = { type: string; slug: string; name: string; summary: string; description: string; url: string; imageUrl?: string; areas: string[]; technologies: string[]; languages: string[]; updatedAt: string };
 
 const linkableResources = resources.filter(resource => !resource.demo && ['courses', 'platforms', 'universities', 'bootcamps', 'roadmaps', 'books', 'certifications'].includes(resource.type));
+
+function DiscussionResourceContext({ number }: { number: number }) {
+  const [resource, setResource] = useState<DiscussionResource | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch(`/api/discussions/${number}/resource-context`, { cache: 'no-store', signal: controller.signal })
+      .then(async response => { if (!response.ok) throw new Error(); return response.json(); })
+      .then(result => { if (!controller.signal.aborted) setResource(result.resource); })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [number]);
+  if (!resource) return null;
+  const catalogResource = resources.find(item => item.type === resource.type && item.slug === resource.slug);
+  const category = catalogResource && categories.find(item => item.id === catalogResource.type);
+  return <aside aria-label="Recurso comentado" className="overflow-hidden rounded-lg border bg-card">
+    {resource.imageUrl && <LoadingImage src={resource.imageUrl} alt="" className="aspect-[16/5] w-full bg-muted object-cover" imageClassName="size-full object-cover" />}
+    <div className="space-y-3 p-4 sm:p-5">
+      <p className="text-xs font-medium text-muted-foreground">{category?.name || 'Recurso do Guia'}</p>
+      <h3 className="text-lg font-semibold">{resource.name}</h3>
+      <p className="text-sm leading-relaxed text-muted-foreground">{resource.summary}</p>
+      <p className="whitespace-pre-wrap text-sm leading-relaxed">{resource.description}</p>
+      <div className="flex flex-wrap gap-2">{resource.areas.map(area => <Badge key={area} variant="outline">{labels[area] || area}</Badge>)}{resource.technologies.map(technology => <Badge key={technology} variant="secondary">{labels[technology] || technology}</Badge>)}{resource.languages.map(language => <Badge key={language} variant="secondary">{language}</Badge>)}</div>
+      {catalogResource && <Button asChild variant="outline" size="sm"><a href={resourcePath(catalogResource)}>Ver recurso no Guia<ArrowUpRight /></a></Button>}
+    </div>
+  </aside>;
+}
 
 function ModerateResourceLink({ number }: { number: number }) {
   const auth = useContext(SessionContext);
@@ -152,6 +179,7 @@ export function DiscussionThread({ number, embedded = false, onPublished }: { nu
   return <section className={`space-y-5 ${embedded ? '' : 'mx-auto w-full max-w-4xl'}`} aria-label="Conversa">
     {!embedded && <Button asChild variant="ghost" className="-ml-3"><a href={returnUrl}><ArrowLeft />{returnParameters.has('q') ? 'Voltar à busca' : 'Todas as conversas'}</a></Button>}
     {!ready ? <RequestState error={error} unconfigured={result?.status === 'unconfigured'} retry={retry} /> : <>
+      {!embedded && <DiscussionResourceContext number={number} />}
       <article data-motion className="overflow-hidden rounded-lg border bg-card">
         <header className="space-y-4 border-b p-4 sm:p-6">
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><span aria-hidden="true" className="flex size-8 items-center justify-center rounded-full bg-muted font-semibold uppercase">{ready.discussion.author.slice(0, 1)}</span><span className="font-semibold text-foreground">{ready.discussion.author}</span><span>·</span><DateLabel value={ready.discussion.updatedAt} /><span className="ml-auto"><PublicationActions author={ready.discussion.author} number={number} title={ready.discussion.title} body={ready.body} onChanged={published} onDeleted={() => { if (embedded) published(); else window.location.assign(returnUrl); }} /></span></div>
