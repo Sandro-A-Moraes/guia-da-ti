@@ -50,15 +50,19 @@ try {
   async function evaluate(expression) { const result = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }); if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text); return result.result.value; }
   async function waitFor(expression) { for (let i = 0; i < 80; i++) { if (await evaluate(expression)) return; await sleep(100); } throw new Error(`Timed out: ${expression}`); }
   async function navigate(path) { if (path.startsWith('/contribuir')) { const category=new URL(path,base).searchParams.get('categoria')||''; await navigate('/'); await evaluate('window.dispatchEvent(new CustomEvent("guia:contribute",{detail:'+JSON.stringify(category)+'}))'); await waitFor('!!document.querySelector("[data-slot=dialog-content]")'); return; } await send('Page.navigate', { url: base + path }); await waitFor(`document.readyState === 'complete' && !!document.querySelector('main h1') && location.pathname === ${JSON.stringify(new URL(path, base).pathname)}`); await sleep(500); }
+
   async function click(expression) {
     for(let i=0;i<25;i++) {
+
       const step=await evaluate(`(()=>{const panel=(${expression})?.closest('[data-contribution-step]');const active=document.querySelector('[data-contribution-step]:not([hidden])');return panel?.hidden?{target:Number(panel.dataset.contributionStep),current:Number(active.dataset.contributionStep)}:null})()`);
       if(!step)break;
       await click(`[...document.querySelectorAll('[data-contribution-form] button')].find(b=>b.textContent.trim()===${JSON.stringify(step.target>step.current?'Continuar':'Voltar')})`);
       await waitFor(`Number(document.querySelector('[data-contribution-step]:not([hidden])').dataset.contributionStep)!==${step.current}`);
+
     }
-    const point = await evaluate(`(async()=>{const el=${expression}; if(!el)throw Error('Missing element');el.scrollIntoView({block:'center',behavior:'instant'});await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));const r=el.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()`); await send('Input.dispatchMouseEvent', { type: 'mousePressed', ...point, button: 'left', clickCount: 1 }); await send('Input.dispatchMouseEvent', { type: 'mouseReleased', ...point, button: 'left', clickCount: 1 });
+    const point = await evaluate(`(async()=>{const el=${expression};if (!el) throw Error('Missing element: ' + ${JSON.stringify(expression)});el.scrollIntoView({block:'center',behavior:'instant'});await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));const r=el.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()`); await send('Input.dispatchMouseEvent', { type: 'mousePressed', ...point, button: 'left', clickCount: 1 }); await send('Input.dispatchMouseEvent', { type: 'mouseReleased', ...point, button: 'left', clickCount: 1 });
   }
+
   async function selectOption(label,text) { await click('document.querySelector('+JSON.stringify('[role="combobox"][aria-label="'+label+'"]')+')'); await waitFor('!!document.querySelector('+JSON.stringify('[role="listbox"]')+')'); await click('[...document.querySelectorAll('+JSON.stringify('[role="option"]')+')].find(option=>option.textContent.trim()==='+JSON.stringify(text)+')'); }
   async function hover(expression) { const point = await evaluate(`(()=>{const el=${expression}; if(!el)throw Error('Missing element');el.scrollIntoView({block:'center'});const r=el.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()`); await send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...point }); }
   async function key(key, code = key) { const windowsVirtualKeyCode = { Enter: 13, Escape: 27, ArrowDown: 40, ArrowRight: 39, ArrowLeft: 37, Tab: 9 }[key]; await send('Input.dispatchKeyEvent', { type: 'keyDown', key, code, windowsVirtualKeyCode, ...(key === 'Enter' ? { text: '\r' } : {}) }); await send('Input.dispatchKeyEvent', { type: 'keyUp', key, code, windowsVirtualKeyCode }); }

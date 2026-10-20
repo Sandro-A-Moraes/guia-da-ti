@@ -456,7 +456,7 @@ export function StudyDetail({ resource }: { resource: Resource }) {
             <p  className="text-xs text-destructive">{error} <Button 
                                                               type="button" 
                                                               size="xs" 
-                                                              variant="link" 
+                                                              variant="link"
                                                               className="p-0  underline cursor-pointer"
                                                               onClick={refresh}>Tentar novamente.</Button>
             </p> 

@@ -111,9 +111,14 @@ export async function checkStudy({
   );
   await evaluate(`sessionStorage.setItem('studyTestMode','error')`);
   await navigate("/plataformas/");
+
   await waitFor(
-    `document.querySelector('main [role="alert"]')?.textContent.includes('A atividade dos itens não carregou. Tente novamente.')`,
-  );
+  `document.querySelector('main [role="alert"]')?.textContent.includes('A atividade dos itens não carregou.') &&
+  [...document.querySelectorAll('main [role="alert"] button')].some(
+    button => button.textContent.trim() === 'Tentar novamente'
+  )`,
+);
+
   assert.equal(
     await evaluate(
       `document.querySelector('main').textContent.includes('— comentários')`,
