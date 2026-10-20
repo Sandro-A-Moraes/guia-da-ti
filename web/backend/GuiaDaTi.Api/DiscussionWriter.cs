@@ -8,6 +8,18 @@ using Microsoft.AspNetCore.Antiforgery;
 public sealed class DiscussionWriter(IHttpClientFactory clients, IConfiguration configuration, ILogger<DiscussionWriter>? logger = null)
 {
     private readonly string repository = configuration["DISCUSSIONS_REPOSITORY"] ?? "guia-da-ti/guia-da-ti-dados";
+    public async Task<bool> CanManageAsync(string token, int number, CancellationToken cancellation)
+    {
+        if (number < 1 || !Regex.IsMatch(repository, @"^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9_.-]+$")) return false;
+        var data = await Query(token, """
+            query($owner:String!,$name:String!,$number:Int!){repository(owner:$owner,name:$name){isPrivate hasDiscussionsEnabled viewerPermission discussion(number:$number){id}}}
+            """, new { owner = repository.Split('/')[0], name = repository.Split('/')[1], number }, cancellation);
+        var repo = data.GetProperty("repository");
+        if (repo.ValueKind != JsonValueKind.Object || repo.GetProperty("isPrivate").GetBoolean()
+            || !repo.GetProperty("hasDiscussionsEnabled").GetBoolean() || repo.GetProperty("discussion").ValueKind != JsonValueKind.Object) return false;
+        return new[] { "WRITE", "MAINTAIN", "ADMIN" }.Contains(repo.GetProperty("viewerPermission").GetString());
+    }
+
     public async Task<int> PublishAsync(string token, DiscussionDraft draft, CancellationToken cancellation)
     {
         if (!Regex.IsMatch(repository, @"^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9_.-]+$")) throw new DiscussionsUnavailableException();

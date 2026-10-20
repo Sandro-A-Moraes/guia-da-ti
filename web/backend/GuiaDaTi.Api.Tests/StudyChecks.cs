@@ -93,6 +93,13 @@ static class StudyChecks
             Assert((await linkedActivity.ListAsync(null,default))[0].Discussion==7,"Approved resource exposes original suggestion topic before comments");
             await linkedActivity.CommentAsync(linkedResource,"visitor-token","Comentário na sugestão",default);
             Assert(linkedHandler.Topics==1 && linkedHandler.Comments==1,"Approved resource comments use suggestion thread without creating another topic");
+            Assert(await linkedActivity.UnlinkDiscussionAsync(7,default),"Moderators can remove a catalog discussion link without deleting its topic");
+            Assert(await linkedActivity.LinkedResourceAsync(7,default) is null && (await linkedActivity.ListAsync(null,default))[0].Discussion is null,"An explicit unlink overrides a catalog discussion number");
+            await linkedActivity.LinkDiscussionAsync(linkedResource,8,default);
+            Assert((await linkedActivity.LinkedResourceAsync(8,default))?.Slug=="approved-book","A moderator can link an existing discussion to a resource");
+            try { await linkedActivity.LinkDiscussionAsync(resource,8,default); throw new Exception("A discussion linked to two resources"); }
+            catch (ArgumentException) { }
+            Assert(await linkedActivity.UnlinkDiscussionAsync(8,default),"A moderator can remove a manually added link");
             var raceHandler = new StudyGitHub(resource) { BlockMutations=true };
             var raceFactory = new StudyFactory(raceHandler);
             var raceConfig = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string?> {
@@ -123,14 +130,20 @@ static class StudyChecks
         var builder=WebApplication.CreateBuilder(new WebApplicationOptions {EnvironmentName=Environments.Development});
         builder.Configuration.Sources.Clear();builder.Configuration.AddConfiguration(configuration);builder.Logging.ClearProviders();
         builder.Configuration["AUTH_STORAGE_PATH"] = Path.Combine(folder, "auth");
-        builder.Services.AddSingleton(TimeProvider.System);builder.Services.AddSingleton(catalog);builder.Services.AddSingleton(activity);
+        builder.Services.AddSingleton(TimeProvider.System);builder.Services.AddSingleton(catalog);builder.Services.AddSingleton(activity);builder.Services.AddSingleton(new DiscussionWriter(new StudyFactory(new StudyGitHub(catalog.Resources[0]) {Topics=1}),configuration));
         builder.AddCommunityAuth();builder.WebHost.UseSetting("urls","http://127.0.0.1:0");
-        await using var app=builder.Build();app.UseAuthentication();app.MapCommunityAuth();app.MapStudyEngagement();
-        app.MapGet("/test/login",async (Microsoft.AspNetCore.Http.HttpContext context)=>await context.SignInAsync(new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier,"123"),new Claim(ClaimTypes.Name,"test")],CookieAuthenticationDefaults.AuthenticationScheme))));
+        await using var app=builder.Build();app.UseAuthentication();app.MapCommunityAuth();app.MapStudyEngagement();app.MapDiscussionResourceLinks();
+        app.MapGet("/test/login",async (Microsoft.AspNetCore.Http.HttpContext context)=>{
+            var properties=new AuthenticationProperties();
+            properties.StoreTokens([new AuthenticationToken {Name="access_token",Value="visitor-token"}]);
+            await context.SignInAsync(new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier,"123"),new Claim(ClaimTypes.Name,"test")],CookieAuthenticationDefaults.AuthenticationScheme)),properties);
+        });
         await app.StartAsync();
         try {
             using var http=new HttpClient {BaseAddress=new Uri(app.Urls.Single())};
             Assert((await http.PostAsJsonAsync("/api/study/books/book/vote",new {rating=5})).StatusCode==HttpStatusCode.Unauthorized,"Anonymous writes rejected");
+            Assert((await http.PostAsJsonAsync("/api/study/books/book/comments",new {body="Texto"})).StatusCode==HttpStatusCode.Unauthorized,"Comments require visitor OAuth credential");
+            Assert((await http.GetAsync("/api/discussions/7/resource-link")).StatusCode==HttpStatusCode.Unauthorized,"Resource link status requires sign-in");
             (await http.GetAsync("/test/login")).EnsureSuccessStatusCode();
             Assert((await http.PostAsJsonAsync("/api/study/books/book/vote",new {rating=5})).StatusCode==HttpStatusCode.BadRequest,"Missing CSRF rejected");
             using var session=JsonDocument.Parse(await http.GetStringAsync("/api/auth/session"));
@@ -138,9 +151,12 @@ static class StudyChecks
             (await http.PostAsJsonAsync("/api/study/books/book/vote",new {rating=5})).EnsureSuccessStatusCode();
             Assert((await http.PostAsJsonAsync("/api/study/creators/book/vote",new {rating=5})).StatusCode==HttpStatusCode.NotFound,"Study endpoints exclude creators and communities");
             Assert((await http.PostAsJsonAsync("/api/study/books/demo/vote",new {rating=5})).StatusCode==HttpStatusCode.BadRequest,"Fictional catalog items reject real votes");
-            Assert((await http.PostAsJsonAsync("/api/study/books/book/comments",new {body="Texto"})).StatusCode==HttpStatusCode.Unauthorized,"Comments require visitor OAuth credential");
             var response=await http.GetAsync("/api/study/activity");Assert(response.Headers.CacheControl?.NoStore==true,"User-specific ratings are not cached");
             var text=await response.Content.ReadAsStringAsync();Assert(!text.Contains("votes")&&!text.Contains("123"),"Public response excludes account IDs and vote registry");
+            var linkStatus=await http.GetFromJsonAsync<JsonElement>("/api/discussions/7/resource-link");Assert(linkStatus.GetProperty("allowed").GetBoolean(),"Only repository maintainers can manage resource links");
+            var linked=await http.PostAsJsonAsync("/api/discussions/7/resource-link",new {type="books",slug="book"});linked.EnsureSuccessStatusCode();
+            Assert((await http.GetFromJsonAsync<JsonElement>("/api/discussions/7/resource-link")).GetProperty("resource").GetProperty("slug").GetString()=="book","Moderator link is visible to review");
+            Assert((await http.DeleteAsync("/api/discussions/7/resource-link")).StatusCode==HttpStatusCode.NoContent,"Moderator can remove a resource link without deleting the forum topic");
         }finally{await app.StopAsync();}
     }
     private static void Assert(bool ok,string message){if(!ok)throw new Exception(message);}
@@ -174,7 +190,7 @@ sealed class StudyGitHub(Resource resource):HttpMessageHandler
         }else{
             var category=new {id="general",name="Geral"};var pageInfo=new {hasNextPage=false,endCursor=(string?)null};
             var thread=new {number=7,id="topic-7",title=OriginalSuggestion?$"[Sugestão] {resource.Name}":StudyEngagement.TopicTitle(resource),bodyText=TopicBody,category,author=new {login="visitor"},updatedAt="2026-10-07T12:00:00Z",isAnswered=false,locked=false,closed=false,comments=new {totalCount=Comments,pageInfo,nodes=Array.Empty<object>()}};
-            data=new {repository=new {id="repo",isPrivate=false,hasDiscussionsEnabled=true,discussionCategories=new {nodes=new[]{category}},discussions=new {pageInfo,nodes=Topics==0||Missing?[]:new[]{thread}},discussion=Missing?(object?)null:thread}};
+            data=new {repository=new {id="repo",isPrivate=false,hasDiscussionsEnabled=true,viewerPermission="WRITE",discussionCategories=new {nodes=new[]{category}},discussions=new {pageInfo,nodes=Topics==0||Missing?[]:new[]{thread}},discussion=Missing?(object?)null:thread}};
         }
         return new(HttpStatusCode.OK){Content=JsonContent.Create(new {data})};
     }

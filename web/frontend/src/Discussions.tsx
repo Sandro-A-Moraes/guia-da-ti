@@ -1,7 +1,7 @@
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { Fragment, useContext, useEffect, useRef, useState } from 'react';
 import { Advertisement } from './Advertisement';
 import { PublicationActions } from './PublicationActions';
-import { ApproveContribution, Composer } from './Participation';
+import { ApproveContribution, Composer, SessionContext } from './Participation';
 import { DiscussionSkeleton } from './Loading';
 import { ArrowLeft, ArrowUpRight, ChevronDown, MessageSquareText, Plus, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { categories } from './catalog';
+import { categories, resources, resourcePath } from './catalog';
 import { DiscussionBody } from './DiscussionBody';
 import { LoadingImage } from './LoadingImage';
 
@@ -19,6 +19,62 @@ type Discussion = { number: number; title: string; preview: string; imageUrl?: s
 type Comment = { id: string; author: string; avatarUrl: string | null; body: string; createdAt: string; isAnswer: boolean; isDeleted: boolean; replies: Comment[]; replyCount: number };
 type DiscussionList = { status: 'ready'; repositoryUrl: string; categories: Category[]; items: Discussion[]; pageInfo: PageInfo; totalCount?: number | null };
 type Thread = { status: 'ready'; discussion: Discussion; body: string; comments: Comment[]; pageInfo: PageInfo };
+type ResourceLink = { type: string; slug: string; name: string };
+
+const linkableResources = resources.filter(resource => !resource.demo && ['courses', 'platforms', 'universities', 'bootcamps', 'roadmaps', 'books', 'certifications'].includes(resource.type));
+
+function ModerateResourceLink({ number }: { number: number }) {
+  const auth = useContext(SessionContext);
+  const [status, setStatus] = useState<{ allowed: boolean; resource?: ResourceLink | null } | null>(null);
+  const [selected, setSelected] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    if (!auth?.session?.login) return;
+    const controller = new AbortController();
+    fetch(`/api/discussions/${number}/resource-link`, { cache: 'no-store', signal: controller.signal })
+      .then(async response => { if (!response.ok) throw new Error(); return response.json(); })
+      .then(setStatus)
+      .catch(() => { if (!controller.signal.aborted) setError('Não foi possível verificar o vínculo.'); });
+    return () => controller.abort();
+  }, [number, auth?.session?.login]);
+  if (!auth?.session?.login || !status?.allowed) return null;
+  const csrfToken = auth.session.csrfToken;
+  const linked = status.resource ? resources.find(resource => resource.type === status.resource!.type && resource.slug === status.resource!.slug) : null;
+  async function update(method: 'POST' | 'DELETE') {
+    if (busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      const response = await fetch(`/api/discussions/${number}/resource-link`, {
+        method,
+        headers: { 'X-CSRF-Token': csrfToken, ...(method === 'POST' ? { 'Content-Type': 'application/json' } : {}) },
+        ...(method === 'POST' ? { body: JSON.stringify({ type: selected.split('/')[0], slug: selected.split('/')[1] }) } : {}),
+      });
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || 'Não foi possível salvar o vínculo.');
+      }
+      const resource = method === 'DELETE' ? null : linkableResources.find(item => `${item.type}/${item.slug}` === selected) || null;
+      setStatus({ allowed: true, resource: resource ? { type: resource.type, slug: resource.slug, name: resource.name } : null });
+      setSelected('');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Não foi possível salvar o vínculo.');
+    } finally { setBusy(false); }
+  }
+  return <section aria-label="Vínculo com recurso do catálogo" className="space-y-3 rounded-lg border bg-card p-4">
+    <p className="text-sm">{status.resource ? <>Vinculado a {linked ? <a className="text-primary underline" href={resourcePath(linked)}>{status.resource.name}</a> : status.resource.name}</> : 'Nenhum recurso vinculado a este tópico.'}</p>
+    <div className="flex flex-wrap gap-2">
+      <Select value={selected} onValueChange={setSelected} disabled={busy}>
+      <SelectTrigger aria-label="Recurso do catálogo" className="min-w-56 flex-1"><SelectValue placeholder="Escolha um recurso" /></SelectTrigger>
+        <SelectContent>{linkableResources.map(resource => <SelectItem key={`${resource.type}/${resource.slug}`} value={`${resource.type}/${resource.slug}`}>{resource.name}</SelectItem>)}</SelectContent>
+      </Select>
+      <Button type="button" disabled={busy || !selected} onClick={() => void update('POST')}>{busy ? 'Salvando…' : 'Vincular recurso'}</Button>
+      {status.resource && <Button type="button" variant="outline" disabled={busy} onClick={() => void update('DELETE')}>Remover vínculo</Button>}
+    </div>
+    {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+  </section>;
+}
 
 function useDiscussions<T>(url: string) {
   const [result, setResult] = useState<T | { status: 'unconfigured' } | null>(null);
@@ -108,6 +164,7 @@ export function DiscussionThread({ number, embedded = false, onPublished }: { nu
           <div className="flex flex-wrap items-center gap-2">{ready.body.includes('Categoria do guia:') && <ApproveContribution number={number} />}<Button asChild variant="ghost" size="xs"><a href={ready.discussion.url} target="_blank" rel="noopener noreferrer">Ver no GitHub<ArrowUpRight /></a></Button></div>
         </footer>
       </article>
+      <ModerateResourceLink number={number} />
       <Advertisement placement={embedded ? 'study-topic' : 'forum-topic'} />
       {!ready.discussion.locked && <div className="rounded-lg border bg-card p-4"><Composer prompt number={number} githubUrl={ready.discussion.url} onPublished={() => { setCursors([]); published(); }} /></div>}
       <section aria-label="Comentários" className="overflow-hidden rounded-lg border bg-card">
