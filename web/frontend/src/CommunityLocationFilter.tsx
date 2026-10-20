@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { Globe2, MapPin, RotateCcw } from 'lucide-react';
-import { WorldMap } from './WorldMap';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import map from './data/brazil-states.json';
+import type { BrazilStatesMap } from './brazil-states';
 import { brazilRegions, toggleStates, type LocationSelection } from './community-location';
+import { LazyLoad, retryableImport, retryableLazy } from './LazyLoad';
 
-export function CommunityLocationFilter({ value, onChange }: { value: LocationSelection; onChange: (next: LocationSelection) => void }) {
+const WorldMap = retryableLazy(retryableImport(() => import('./WorldMap')), module => module.WorldMap);
+
+export function CommunityLocationFilter({ value, onChange, map }: { value: LocationSelection; onChange: (next: LocationSelection) => void; map: BrazilStatesMap }) {
   const [mode, setMode] = useState<'states' | 'regions'>('states');
   const [hovered, setHovered] = useState('');
   function select(uf: string, region: string) {
@@ -20,7 +22,7 @@ export function CommunityLocationFilter({ value, onChange }: { value: LocationSe
     </div>
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
       <div className="flex min-h-80 min-w-0 flex-col justify-center rounded-lg bg-muted/20 p-3">
-        {value.scope === 'international' ? <WorldMap /> : <><div role="group" aria-label="Selecionar no mapa por" className="flex justify-center gap-2">
+        {value.scope === 'international' ? <LazyLoad loader={WorldMap} props={{}} loading={<div className="min-h-64" />} message="Não foi possível carregar o mapa mundial." /> : <><div role="group" aria-label="Selecionar no mapa por" className="flex justify-center gap-2">
           <Button type="button" size="sm" variant={mode === 'states' ? 'default' : 'ghost'} aria-pressed={mode === 'states'} onClick={() => setMode('states')}>Estados</Button>
           <Button type="button" size="sm" variant={mode === 'regions' ? 'default' : 'ghost'} aria-pressed={mode === 'regions'} onClick={() => setMode('regions')}>Regiões</Button>
         </div>

@@ -1,7 +1,7 @@
 import type { Resource } from './catalog';
 
 const covers = import.meta.glob('./assets/{study,inform,networking,practice,career}/*/*.{webp,png,jpg,jpeg,svg,ico}', {
-  eager: true, query: '?url', import: 'default',
+  eager: true, query: '?url&no-inline', import: 'default',
 }) as Record<string, string>;
 
 export function resourceImage(resource: Resource) {

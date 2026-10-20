@@ -16,6 +16,7 @@ import { checkUniversityFilter } from './university-filter-ui.mjs';
 import { checkContributionWizard } from './contribution-wizard-ui.mjs';
 import { checkContributionImages } from './contribution-images-ui.mjs';
 import { installDiscussionFixtures, checkDiscussions } from './discussions-ui.mjs';
+import { checkLazyLoadFailure } from './lazy-load-ui.mjs';
 
 const profile = await mkdtemp(join(tmpdir(), 'guia-ui-'));
 const chrome = process.env.CHROME_PATH || (process.platform === 'win32' ? 'C:/Program Files/Google/Chrome/Application/chrome.exe' : 'google-chrome');
@@ -75,6 +76,7 @@ try {
   await checkYouTubeCuration({selectOption,send, evaluate, waitFor, navigate, click, selectOption});
   await checkSocialCuration({send, evaluate, waitFor, navigate, click, selectOption});
   await checkCommunityCuration({send, evaluate, waitFor, navigate, click, selectOption});
+  await checkLazyLoadFailure({send, evaluate, waitFor, navigate, click, errors});
   await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
   await navigate('/');
   await checkRouteFlash({send,evaluate,waitFor,navigate});
@@ -175,7 +177,8 @@ try {
   const filterButton = "[...document.querySelectorAll('main button')].find(button=>button.textContent.includes('Filtrar comunidades'))";
   await click(filterButton);
   await waitFor(`document.querySelector('[role="dialog"]')?.textContent.includes('Filtrar comunidades')`);
-  assert.equal(await evaluate(`document.querySelectorAll('svg [data-uf]').length`),27);
+  // The map loads on demand after the dialog opens.
+  await waitFor(`document.querySelectorAll('svg [data-uf]').length === 27`);
   await evaluate(`document.querySelector('[data-uf="SP"]').focus()`); await key('Enter');
   await evaluate(`document.querySelector('[data-uf="RJ"]').focus()`); await key('Enter');
   assert.equal(await evaluate(`document.querySelectorAll('svg path[aria-pressed="true"]').length`),2);

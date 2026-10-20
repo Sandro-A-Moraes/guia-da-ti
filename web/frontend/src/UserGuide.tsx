@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { HyperframesPlayer } from '@hyperframes/player';
 import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ArrowUpRight, BookOpen, Briefcase, CalendarDays, CircleHelp, Code, Compass, Github, Lightbulb, MessageSquare, Megaphone, Newspaper, Pause, Play, Users, Video, HeartHandshake, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -114,13 +113,18 @@ function GuideTimeline({ dark, steps = guideSteps, embedded = false }: { dark: b
   useEffect(() => {
     const root = scroller.current;
     if (!root || reduced) return;
-    gsap.registerPlugin(ScrollTrigger);
-    const context = gsap.context(() => {
-      const items = root.querySelectorAll('[data-guide-step]');
-      items.forEach(item => gsap.from(item, { opacity: 0, y: 24, duration: 0.55, ease: 'power2.out', scrollTrigger: { trigger: item, scroller: embedded ? undefined : root, start: 'top 94%', once: true } }));
-      gsap.fromTo('[data-guide-line]', { scaleY: 0 }, { scaleY: 1, ease: 'none', scrollTrigger: { trigger: '[data-guide-timeline]', scroller: embedded ? undefined : root, start: 'top 70%', end: 'bottom 75%', scrub: 0.3 } });
-    }, root);
-    return () => context.revert();
+    let disposed = false;
+    let context: gsap.Context | undefined;
+    void import('gsap/ScrollTrigger').then(({ ScrollTrigger }) => {
+      if (disposed) return;
+      gsap.registerPlugin(ScrollTrigger);
+      context = gsap.context(() => {
+        const items = root.querySelectorAll('[data-guide-step]');
+        items.forEach(item => gsap.from(item, { opacity: 0, y: 24, duration: 0.55, ease: 'power2.out', scrollTrigger: { trigger: item, scroller: embedded ? undefined : root, start: 'top 94%', once: true } }));
+        gsap.fromTo('[data-guide-line]', { scaleY: 0 }, { scaleY: 1, ease: 'none', scrollTrigger: { trigger: '[data-guide-timeline]', scroller: embedded ? undefined : root, start: 'top 70%', end: 'bottom 75%', scrub: 0.3 } });
+      }, root);
+    }).catch(() => { /* Without the plugin, the timeline stays visible without animation. */ });
+    return () => { disposed = true; context?.revert(); };
   }, [reduced, embedded]);
 
   return <div ref={scroller} className={embedded ? 'py-3' : 'min-h-0 overflow-y-auto overscroll-contain px-5 py-7 sm:px-9 sm:py-9'} tabIndex={embedded ? undefined : 0} aria-label="Etapas para usar o Guia">
