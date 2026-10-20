@@ -46,6 +46,8 @@ static class StudyChecks
             Assert(handler.TopicBody.Contains(resource.Url) && handler.TopicBody.Contains(resource.Description) && !handler.TopicBody.Contains("Primeira experiência"),"Resource opens the topic and first visitor message stays a comment");
             var second=await restarted.CommentAsync(resource,"visitor-token","Outra experiência",default);
             Assert(first==7 && second==7 && handler.Topics==1 && handler.Comments==2 && handler.VisitorOnly,"Comments reuse one resource topic and visitor credentials");
+            var linkedResources=await activity.LinkedResourcesAsync([first],default);
+            Assert(linkedResources[first] is {Type:"books",Slug:"book",Name:"Livro"},"Forum listing receives the resource linked to each discussion");
             Assert((await activity.ListAsync("1",default))[0].Comments==2,"Only visitor comments count, not the resource presentation");
             handler.BlockMutations = true;
             var slowComment = activity.CommentAsync(resource, "visitor-token", "Comentário lento", default);

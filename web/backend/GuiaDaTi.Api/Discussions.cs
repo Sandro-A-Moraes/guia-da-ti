@@ -250,8 +250,9 @@ public sealed class DiscussionsClient(IHttpClientFactory clients, IConfiguration
 public sealed class DiscussionsUnavailableException : Exception;
 public record DiscussionCategory(string Id, string Name);
 public record DiscussionPage(bool HasNextPage, string? EndCursor);
+public record DiscussionResourceReference(string Type, string Slug, string Name);
 public record DiscussionSummary(int Number, string Title, DiscussionCategory Category, string Author,
-    string UpdatedAt, int CommentCount, bool IsAnswered, bool Locked, string Url, string Preview = "", string? ResourceCategory = null, string? ImageUrl = null);
+    string UpdatedAt, int CommentCount, bool IsAnswered, bool Locked, string Url, string Preview = "", string? ResourceCategory = null, string? ImageUrl = null, DiscussionResourceReference? LinkedResource = null);
 public record DiscussionList(string Status, string RepositoryUrl, DiscussionCategory[] Categories, DiscussionSummary[] Items, DiscussionPage PageInfo, int? TotalCount = null);
 public record DiscussionComment(string Id, string Author, string? AvatarUrl, string Body, string CreatedAt, bool IsAnswer, bool IsDeleted, DiscussionComment[] Replies, int ReplyCount);
 public record DiscussionThread(string Status, DiscussionSummary Discussion, string Body, DiscussionComment[] Comments, DiscussionPage PageInfo);
@@ -260,12 +261,16 @@ public static class DiscussionEndpoints
 {
     public static void MapDiscussions(this WebApplication app)
     {
-        app.MapGet("/api/discussions", async (string? q, string? category, string? after, DiscussionsClient client, CancellationToken cancellation) =>
+        app.MapGet("/api/discussions", async (string? q, string? category, string? after, DiscussionsClient client, StudyEngagement activity, CancellationToken cancellation) =>
         {
             if (q?.Length > 200 || category?.Length > 200 || after?.Length > 500) return Results.BadRequest(new { error = "Parâmetros inválidos." });
-            return await Respond(client, async () => Results.Ok(string.IsNullOrWhiteSpace(q)
-                ? await client.ListAsync(category, after, cancellation)
-                : await client.SearchAsync(q.Trim(), category, after, cancellation)), cancellation);
+            return await Respond(client, async () => {
+                var list = string.IsNullOrWhiteSpace(q)
+                    ? await client.ListAsync(category, after, cancellation)
+                    : await client.SearchAsync(q.Trim(), category, after, cancellation);
+                var links = await activity.LinkedResourcesAsync(list.Items.Select(item => item.Number), cancellation);
+                return Results.Ok(list with { Items = list.Items.Select(item => item with { LinkedResource = links.GetValueOrDefault(item.Number) }).ToArray() });
+            }, cancellation);
         });
         app.MapGet("/api/discussions/{number:int}", async (int number, string? after, DiscussionsClient client, CancellationToken cancellation) =>
         {
@@ -279,7 +284,7 @@ public static class DiscussionEndpoints
         if (!client.Configured) return Results.Ok(new { status = "unconfigured" });
         try { return await action(); }
         catch (OperationCanceledException) when (!cancellation.IsCancellationRequested) { return Unavailable(); }
-        catch (Exception error) when (error is HttpRequestException or JsonException or DiscussionsUnavailableException or InvalidOperationException or KeyNotFoundException)
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or HttpRequestException or JsonException or DiscussionsUnavailableException or InvalidOperationException or KeyNotFoundException)
         { return Unavailable(); }
     }
     private static IResult Unavailable() => Results.Json(new { status = "unavailable", error = "Não foi possível carregar as conversas. Tente novamente em instantes." }, statusCode: 503);
