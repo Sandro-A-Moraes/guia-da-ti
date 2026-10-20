@@ -70,7 +70,7 @@ app.MapCreatorProfiles();
 app.MapCommunityActivity();
 app.MapRegisteredUsers();
 app.MapStudyEngagement();
-app.MapDiscussionResourceLinks();
+app.MapDiscussionResourceContext();
 app.MapAdvertising();
 app.MapGet("/apoiadores", () => Results.Redirect("/sobre#apoiadores", permanent: true));
 app.MapGet("/contribuidores", () => Results.Redirect("/sobre#mantenedores", permanent: true));
