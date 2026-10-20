@@ -76,7 +76,7 @@ export async function checkDiscussions({ send, evaluate, click, waitFor, navigat
   await waitFor(`document.querySelectorAll('[aria-label="Conversas"] > li').length === 4`);
   assert.equal(await evaluate(`document.querySelector('[aria-label="Conversas"]').textContent.includes('Sites de vagas')`), false);
   assert.equal(await evaluate(`!!document.querySelector('[aria-label="Publicidade"]').parentElement.previousElementSibling?.querySelector('article') && !!document.querySelector('[aria-label="Publicidade"]').parentElement.nextElementSibling?.querySelector('article')`), true);
-  assert.equal(await evaluate(`(()=>{const article=document.querySelector('[aria-label="Conversas"] article');const image=article?.querySelector('img');return image?.alt===('Imagem de '+article.querySelector('h2').textContent)&&image?.getBoundingClientRect().height<=144&&getComputedStyle(image).objectFit==='contain'})()`), true, 'Feed images stay compact and preserve their aspect ratio');
+  assert.equal(await evaluate(`(()=>{const article=document.querySelector('[aria-label="Conversas"] article');const image=article?.querySelector('img');return image?.alt===('Imagem de '+article.querySelector('h2').textContent)&&image?.getBoundingClientRect().height<=144&&getComputedStyle(image).objectFit==='cover'})()`), true, 'Feed images fill their compact preview without distortion');
   await mode('ready');
   await navigate('/');
   assert.equal(await evaluate(`!!document.querySelector('main [aria-label="Mantenedores"]')`), false);
