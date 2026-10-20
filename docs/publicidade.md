@@ -47,3 +47,30 @@ Em produção, configure `ADS_STORAGE_PATH` para apontar para um arquivo persist
 O servidor grava primeiro um arquivo temporário e depois substitui o anterior. Ele serializa alterações concorrentes para impedir reservas acima do limite. Se o arquivo existente estiver inválido, informa a falha e preserva o conteúdo para recuperação.
 
 Excluir uma campanha remove também seus contadores. O painel pede confirmação antes dessa ação.
+
+## Registro de ações
+
+Cada alteração feita no painel gera uma linha no log do servidor, na categoria `GuiaDaTi.Audit.Advertising`. O registro cobre criar, editar, pausar, retomar e excluir campanhas, mudar as configurações e ligar ou desligar todos os anúncios.
+
+Cada linha traz:
+
+- `action`: a operação, como `campaign.create`, `campaign.pause` ou `ads.disable`.
+- `actor`: o ID numérico da conta GitHub que fez o pedido.
+- `target`: o ID da campanha, `settings` ou `global`.
+- `outcome` e `status`: o resultado e o código HTTP.
+- `requestId`: o ID da requisição.
+- `at`: o horário em UTC.
+
+Falhas também entram no registro. Os resultados possíveis são `success`, `validation`, `not_found`, `invalid_image`, `storage`, `forbidden`, `csrf`, `cancelled` e `error`. Tentativas de uma conta sem permissão ou sem token CSRF aparecem com o ID de quem tentou.
+
+O log não guarda empresa, título, descrição, endereços, tokens nem mensagens de erro. Para saber o que mudou, compare com o backup de `advertising.json`.
+
+Toda resposta do painel traz o cabeçalho `X-Request-Id`. Ele tem o mesmo valor do `requestId` no log. Se uma ação falhar, copie esse valor para achar a linha correspondente:
+
+```bash
+docker logs "$(docker ps -q --filter label=com.docker.compose.service=app)" 2>&1 | grep AdminAudit
+```
+
+Leituras do painel e acessos sem login não entram no registro. Um pedido com JSON malformado é recusado antes do filtro e também não aparece.
+
+No Docker, o log fica em até três arquivos de 10 MB. Em um site muito movimentado, linhas antigas podem sair do rodízio. Copie o log para outro lugar se precisar de um histórico maior.

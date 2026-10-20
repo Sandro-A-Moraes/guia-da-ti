@@ -45,7 +45,10 @@ public sealed class Advertising(IConfiguration config, IWebHostEnvironment envir
         finally { gate.Release(); }
     }
 
-    public async Task<AdCampaign> Save(Guid? id, AdDraft draft, CancellationToken cancellation = default)
+    public async Task<AdCampaign> Save(Guid? id, AdDraft draft, CancellationToken cancellation = default) =>
+        (await SaveWithChange(id, draft, cancellation)).Campaign;
+
+    public async Task<(AdCampaign Campaign, AdChange Change)> SaveWithChange(Guid? id, AdDraft draft, CancellationToken cancellation = default)
     {
         draft = Validate(draft);
         await gate.WaitAsync(cancellation);
@@ -59,7 +62,10 @@ public sealed class Advertising(IConfiguration config, IWebHostEnvironment envir
             store.Campaigns.Add(campaign);
             ValidateCapacity(store.Settings, store.Campaigns, clock.GetUtcNow());
             await Write(store, cancellation);
-            return campaign;
+            var change = previous is null ? AdChange.Created
+                : previous.Content.Enabled != draft.Enabled && SameExceptEnabled(previous.Content, draft) ? (draft.Enabled ? AdChange.Resumed : AdChange.Paused)
+                : AdChange.Updated;
+            return (campaign, change);
         }
         finally { gate.Release(); }
     }
@@ -149,6 +155,10 @@ public sealed class Advertising(IConfiguration config, IWebHostEnvironment envir
         finally { gate.Release(); }
     }
 
+    private static bool SameExceptEnabled(AdDraft a, AdDraft b) =>
+        a.Company == b.Company && a.Title == b.Title && a.Description == b.Description && a.Url == b.Url && a.ImageUrl == b.ImageUrl
+        && a.Weight == b.Weight && a.StartsAt == b.StartsAt && a.EndsAt == b.EndsAt && a.Placements.Order().SequenceEqual(b.Placements.Order());
+
     private AdDraft Validate(AdDraft draft)
     {
         if (draft is null) throw new ArgumentException("Preencha o anúncio antes de salvar.");
@@ -227,22 +237,32 @@ public sealed class AdvertisingEndpointFilter(bool admin) : IEndpointFilter
     {
         var context = invocation.HttpContext;
         context.Response.Headers.CacheControl = "no-store";
+        var audited = admin && AdvertisingAudit.IsWrite(context.Request);
+        // Lets the administrator quote the same ID that appears in the audit log.
+        if (admin) context.Response.Headers["X-Request-Id"] = context.TraceIdentifier;
+        object? Reject(string outcome, int status, object? response) { if (audited) AdvertisingAudit.Write(invocation, outcome, status); return response; }
         if (admin) {
             if (context.User.Identity?.IsAuthenticated != true) return Results.Unauthorized();
-            if (!AdvertisingAdmin.Allowed(context.User, context.RequestServices.GetRequiredService<IConfiguration>())) return Results.StatusCode(403);
+            if (!AdvertisingAdmin.Allowed(context.User, context.RequestServices.GetRequiredService<IConfiguration>())) return Reject("forbidden", 403, Results.StatusCode(403));
             if (context.Request.Method != "GET") {
                 try { await context.RequestServices.GetRequiredService<IAntiforgery>().ValidateRequestAsync(context); }
-                catch (AntiforgeryValidationException) { return Results.BadRequest(new { error = "Atualize a página e tente novamente." }); }
+                catch (AntiforgeryValidationException) { return Reject("csrf", 400, Results.BadRequest(new { error = "Atualize a página e tente novamente." })); }
             }
         }
-        try { return await next(invocation); }
-        catch (KeyNotFoundException) { return Results.NotFound(new { error = "Este anúncio não foi encontrado. Atualize a lista." }); }
-        catch (ArgumentException e) { return Results.BadRequest(new { error = e.Message }); }
-        catch (ContributionRejectedException e) { return Results.BadRequest(new { error = e.Message }); }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException) {
-            context.RequestServices.GetRequiredService<ILogger<Advertising>>().LogError("Falha no armazenamento de anúncios.");
-            return Results.Json(new { error = "Não foi possível salvar ou consultar os anúncios. Tente novamente." }, statusCode: 503);
+        try {
+            var result = await next(invocation);
+            if (audited) AdvertisingAudit.Write(invocation, "success", result is IStatusCodeHttpResult { StatusCode: { } code } ? code : 200, result);
+            return result;
         }
+        catch (KeyNotFoundException) { return Reject("not_found", 404, Results.NotFound(new { error = "Este anúncio não foi encontrado. Atualize a lista." })); }
+        catch (ArgumentException e) { return Reject("validation", 400, Results.BadRequest(new { error = e.Message })); }
+        catch (ContributionRejectedException e) { return Reject("invalid_image", 400, Results.BadRequest(new { error = e.Message })); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException) {
+            if (!audited) context.RequestServices.GetRequiredService<ILogger<Advertising>>().LogError("Falha no armazenamento de anúncios.");
+            return Reject("storage", 503, Results.Json(new { error = "Não foi possível salvar ou consultar os anúncios. Tente novamente." }, statusCode: 503));
+        }
+        catch (OperationCanceledException) when (audited) { AdvertisingAudit.Write(invocation, "cancelled", 499); throw; }
+        catch (Exception) when (audited) { AdvertisingAudit.Write(invocation, "error", 500); throw; }
     }
 }
 
@@ -255,8 +275,12 @@ public static class AdvertisingEndpoints
             var store = await ads.Snapshot(context.RequestAborted);
             return Results.Ok(new { store.Settings, store.Campaigns, store.Enabled });
         });
-        admin.MapPost("/campaigns", async (AdDraft draft, Advertising ads, HttpContext context) => Results.Ok(await ads.Save(null, draft, context.RequestAborted)));
-        admin.MapPut("/campaigns/{id:guid}", async (Guid id, AdDraft draft, Advertising ads, HttpContext context) => Results.Ok(await ads.Save(id, draft, context.RequestAborted)));
+        admin.MapPost("/campaigns", async (AdDraft draft, Advertising ads, HttpContext context) => Results.Ok((await ads.SaveWithChange(null, draft, context.RequestAborted)).Campaign));
+        admin.MapPut("/campaigns/{id:guid}", async (Guid id, AdDraft draft, Advertising ads, HttpContext context) => {
+            var (campaign, change) = await ads.SaveWithChange(id, draft, context.RequestAborted);
+            context.Items[AdvertisingAudit.ChangeKey] = change;
+            return Results.Ok(campaign);
+        });
         admin.MapDelete("/campaigns/{id:guid}", async (Guid id, Advertising ads, HttpContext context) => { await ads.Delete(id, context.RequestAborted); return Results.NoContent(); });
         admin.MapPut("/settings", async (AdSettings settings, Advertising ads, HttpContext context) => { await ads.Configure(settings, context.RequestAborted); return Results.NoContent(); });
         admin.MapPut("/enabled", async (AdToggle toggle, Advertising ads, HttpContext context) => { await ads.SetEnabled(toggle.Enabled, context.RequestAborted); return Results.NoContent(); });
