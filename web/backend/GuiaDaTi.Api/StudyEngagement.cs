@@ -90,48 +90,8 @@ public sealed class StudyEngagement(IConfiguration configuration, IHostEnvironme
         finally { gate.Release(); }
     }
 
-    public async Task LinkDiscussionAsync(Resource resource, int number, CancellationToken cancellation)
-    {
-        if (number < 1) throw new ArgumentOutOfRangeException(nameof(number));
-        if (resource.Demo || !Types.Contains(resource.Type)) throw new ArgumentException("Este recurso nao aceita vinculo com discussoes.");
-        await gate.WaitAsync(cancellation);
-        try {
-            var store = await ReadAsync(cancellation);
-            var current = store.Items.GetValueOrDefault(Key(resource)) ?? new Entry();
-            var currentDiscussion = CurrentDiscussion(resource, current);
-            if (currentDiscussion is int existing && existing != number) throw new ArgumentException("Este recurso ja esta vinculado a outro topico. Remova o vinculo atual antes de trocar.");
-            var otherResource = catalog.Resources.FirstOrDefault(candidate => Types.Contains(candidate.Type)
-                && Key(candidate) != Key(resource)
-                && CurrentDiscussion(candidate, store.Items.GetValueOrDefault(Key(candidate)) ?? new Entry()) == number);
-            if (otherResource is not null) throw new ArgumentException("Este topico ja esta vinculado a outro recurso.");
-            current.Discussion = number;
-            current.DiscussionOverride = true;
-            store.Items[Key(resource)] = current;
-            await WriteAsync(store, cancellation);
-        }
-        finally { gate.Release(); }
-    }
-
-    public async Task<bool> UnlinkDiscussionAsync(int number, CancellationToken cancellation)
-    {
-        await gate.WaitAsync(cancellation);
-        try {
-            var store = await ReadAsync(cancellation);
-            var resource = catalog.Resources.FirstOrDefault(candidate => Types.Contains(candidate.Type)
-                && CurrentDiscussion(candidate, store.Items.GetValueOrDefault(Key(candidate)) ?? new Entry()) == number);
-            if (resource is null) return false;
-            var entry = store.Items.GetValueOrDefault(Key(resource)) ?? new Entry();
-            entry.Discussion = null;
-            entry.DiscussionOverride = true;
-            store.Items[Key(resource)] = entry;
-            await WriteAsync(store, cancellation);
-            return true;
-        }
-        finally { gate.Release(); }
-    }
-
     private static int? CurrentDiscussion(Resource resource, Entry entry) =>
-        entry.DiscussionOverride ? entry.Discussion : resource.DiscussionNumber ?? entry.Discussion;
+        entry.DiscussionOverride ? resource.DiscussionNumber : resource.DiscussionNumber ?? entry.Discussion;
 
     public async Task VoteAsync(Resource resource, string userId, StudyVote vote, CancellationToken cancellation)
     {
@@ -161,7 +121,8 @@ public sealed class StudyEngagement(IConfiguration configuration, IHostEnvironme
         await resourceGate.WaitAsync(cancellation);
         try {
             var entry = await ReadEntryAsync(key, cancellation);
-            if (!entry.DiscussionOverride) entry.Discussion = resource.DiscussionNumber ?? entry.Discussion;
+            entry.Discussion = resource.DiscussionNumber ?? (entry.DiscussionOverride ? null : entry.Discussion);
+            entry.DiscussionOverride = false;
             if (entry.Discussion is int linked && await reader.ThreadAsync(linked, null, cancellation) is null)
                 entry.Discussion = null;
             if (entry.Discussion is null && !entry.DiscussionOverride) {
