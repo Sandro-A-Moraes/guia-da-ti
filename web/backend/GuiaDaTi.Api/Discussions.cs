@@ -53,6 +53,45 @@ public sealed class DiscussionsClient(IHttpClientFactory clients, IConfiguration
         return new("ready", RepositoryUrl, categories, nodes.Select(Summary).ToArray(), Page(connection), connection.GetProperty("discussionCount").GetInt32());
     }
 
+    public async Task<int> ForumMessageCountAsync(CancellationToken cancellation)
+    {
+        var owner = repository.Split('/')[0];
+        var name = repository.Split('/')[1];
+        string? after = null;
+        var total = 0;
+        for (var page = 0; page < 100; page++)
+        {
+            var data = (await QueryAsync(ForumMetricsQuery, new { owner, name, after }, cancellation)).GetProperty("repository");
+            var discussions = data.GetProperty("discussions");
+            foreach (var discussion in discussions.GetProperty("nodes").EnumerateArray())
+            {
+                total = checked(total + 1);
+                var number = discussion.GetProperty("number").GetInt32();
+                var comments = discussion.GetProperty("comments");
+                total = checked(total + comments.GetProperty("totalCount").GetInt32() + ReplyCount(comments));
+                var commentInfo = comments.GetProperty("pageInfo");
+                var commentCursor = commentInfo.GetProperty("endCursor").GetString();
+                for (var commentPage = 0; commentInfo.GetProperty("hasNextPage").GetBoolean(); commentPage++)
+                {
+                    if (commentPage >= 100 || string.IsNullOrEmpty(commentCursor)) throw new DiscussionsUnavailableException();
+                    var more = (await QueryAsync(ForumCommentRepliesQuery, new { owner, name, number, after = commentCursor }, cancellation))
+                        .GetProperty("repository").GetProperty("discussion").GetProperty("comments");
+                    total = checked(total + ReplyCount(more));
+                    commentInfo = more.GetProperty("pageInfo");
+                    commentCursor = commentInfo.GetProperty("endCursor").GetString();
+                }
+            }
+            var info = discussions.GetProperty("pageInfo");
+            if (!info.GetProperty("hasNextPage").GetBoolean()) return total;
+            after = info.GetProperty("endCursor").GetString();
+            if (string.IsNullOrEmpty(after)) throw new DiscussionsUnavailableException();
+        }
+        throw new DiscussionsUnavailableException();
+    }
+
+    private static int ReplyCount(JsonElement comments) => comments.GetProperty("nodes").EnumerateArray()
+        .Sum(comment => comment.GetProperty("replies").GetProperty("totalCount").GetInt32());
+
     public async Task<DiscussionThread?> ThreadAsync(int number, string? after, CancellationToken cancellation)
     {
         var data = (await QueryAsync(ThreadQuery, new { owner = repository.Split('/')[0], name = repository.Split('/')[1], number, after }, cancellation)).GetProperty("repository");
@@ -225,6 +264,36 @@ public sealed class DiscussionsClient(IHttpClientFactory clients, IConfiguration
           }
         }
         """;
+    private const string ForumMetricsQuery = """
+        query($owner:String!, $name:String!, $after:String) {
+          repository(owner:$owner, name:$name) {
+            isPrivate hasDiscussionsEnabled
+            discussions(first:100, after:$after, orderBy:{field:CREATED_AT,direction:ASC}) {
+              totalCount pageInfo { hasNextPage endCursor }
+              nodes {
+                number
+                comments(first:100) {
+                  totalCount pageInfo { hasNextPage endCursor }
+                  nodes { replies(first:1) { totalCount } }
+                }
+              }
+            }
+          }
+        }
+        """;
+    private const string ForumCommentRepliesQuery = """
+        query($owner:String!, $name:String!, $number:Int!, $after:String) {
+          repository(owner:$owner, name:$name) {
+            isPrivate hasDiscussionsEnabled
+            discussion(number:$number) {
+              comments(first:100, after:$after) {
+                pageInfo { hasNextPage endCursor }
+                nodes { replies(first:1) { totalCount } }
+              }
+            }
+          }
+        }
+        """;
     private const string ThreadQuery = """
         query($owner:String!, $name:String!, $number:Int!, $after:String) {
           repository(owner:$owner, name:$name) {
@@ -272,6 +341,8 @@ public static class DiscussionEndpoints
                 return Results.Ok(list with { Items = list.Items.Select(item => item with { LinkedResource = links.GetValueOrDefault(item.Number) }).ToArray() });
             }, cancellation);
         });
+        app.MapGet("/api/discussions/metrics", async (DiscussionsClient client, CancellationToken cancellation) =>
+            await Respond(client, async () => Results.Ok(new { status = "ready", messages = await client.ForumMessageCountAsync(cancellation) }), cancellation));
         app.MapGet("/api/discussions/{number:int}", async (int number, string? after, DiscussionsClient client, CancellationToken cancellation) =>
         {
             if (number < 1 || after?.Length > 500) return Results.BadRequest(new { error = "Parâmetros inválidos." });

@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { categories, resources } from './catalog';
 import community from './generated/community.json';
 
-type ActivitySummary = { activeUsers: number; peakActiveUsers: number };
+type ActivitySummary = { activeUsers: number };
 const ActivityContext = createContext<ActivitySummary | null>(null);
 const format = (value: number) => value.toLocaleString('pt-BR');
 
@@ -18,7 +18,7 @@ export function CommunityMetricsProvider({ children }: { children: ReactNode }) 
         await fetch('/api/community/activity', { signal: controller.signal, cache: 'no-store' }).then(async response => {
             if (!response.ok) throw Error();
             const data = await response.json();
-            if (!Number.isSafeInteger(data.activeUsers) || data.activeUsers < 0 || !Number.isSafeInteger(data.peakActiveUsers) || data.peakActiveUsers < data.activeUsers) throw Error();
+            if (!Number.isSafeInteger(data.activeUsers) || data.activeUsers < 0) throw Error();
             if (!controller.signal.aborted) setActive(data);
           }).catch(() => { if (!controller.signal.aborted) setActive(null); });
       }
@@ -43,22 +43,30 @@ export function ActiveUsers() {
 }
 
 export function CommunityMetrics() {
-  const active = useContext(ActivityContext);
+  const [forumMessages, setForumMessages] = useState<number | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch('/api/discussions/metrics', { signal: controller.signal, cache: 'no-store' })
+      .then(async response => response.ok ? response.json() : null)
+      .then(data => {
+        if (!controller.signal.aborted && Number.isSafeInteger(data?.messages) && data.messages >= 0) setForumMessages(data.messages);
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
   const metrics = [
-    { value: active === null ? '—' : format(active.peakActiveUsers), label: 'Pico de acesso', detail: 'Maior número de visitantes simultâneos desde a última reinicialização do servidor.' },
-    { value: format(resources.filter(resource => !resource.demo).length), label: 'Recursos no catálogo', detail: 'Indicações organizadas por categoria' },
-    { value: format(categories.length), label: 'Categorias', detail: 'Temas para explorar' },
-    { value: format(community.supporters.length), label: 'Apoiadores', detail: 'Apoiam a continuidade do Guia' },
+    { value: format(resources.filter(resource => !resource.demo).length), label: 'Recursos' },
+    { value: format(categories.length), label: 'Categorias' },
+    { value: forumMessages === null ? '—' : format(forumMessages), label: 'Mensagens no fórum' },
+    { value: format(community.supporters.length), label: 'Apoiadores' },
   ];
-  return <section aria-label="O Guia em números" className="space-y-4 border-y py-7 sm:py-10">
+  return <section aria-label="O Guia em números" className="guide-metrics">
     <h2 className="sr-only">O Guia em números</h2>
-    <dl className="grid grid-cols-2 gap-x-5 gap-y-8 lg:grid-cols-4">
-      {metrics.map((metric, index) => <div key={metric.label} className="flex flex-col gap-2">
-        <dt className="order-2 font-mono text-xs font-medium uppercase tracking-widest">{metric.label}</dt>
-        <dd className={`order-1 font-mono text-4xl font-bold tabular-nums tracking-tight sm:text-5xl ${index === 0 ? 'text-primary' : ''}`}>{metric.value}</dd>
-        <dd className="order-3 text-xs leading-relaxed text-muted-foreground">{metric.detail}</dd>
+    <dl className="guide-metrics-grid">
+      {metrics.map(metric => <div className="guide-metric" key={metric.label}>
+        <dt>{metric.label}</dt>
+        <dd>{metric.value}</dd>
       </div>)}
     </dl>
-    {active === null && <p className="text-xs text-muted-foreground">Não foi possível carregar o pico de acesso agora.</p>}
   </section>;
 }

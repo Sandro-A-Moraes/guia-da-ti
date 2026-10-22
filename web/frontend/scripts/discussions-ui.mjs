@@ -11,7 +11,7 @@ export async function installDiscussionFixtures(send) {
       const url = new URL(String(input), location.origin);
       if (url.pathname === '/api/contributions/notices') return Response.json({stream:'test',cursor:window.noticeItems.length,items:url.searchParams.get('stream')==='test'?window.noticeItems.slice(Number(url.searchParams.get('after'))):[]});
       if (url.pathname === '/api/community/activity') return sessionStorage.getItem('activityTestMode') === 'error'
-        ? new Response('{}', { status: 503 }) : Response.json({ activeUsers: 12, peakActiveUsers: 18, windowMinutes: 5 });
+        ? new Response('{}', { status: 503 }) : Response.json({ activeUsers: 12, windowMinutes: 5 });
       if (url.pathname === '/api/contributors') return Response.json({ items: Array.from({ length: 10 }, (_, index) => ({ name: index === 0 ? 'ana' : 'person' + index, url: 'https://github.com/' + (index === 0 ? 'ana' : 'person' + index), avatarUrl: location.origin + '/favicon.svg', contributions: 5 })) });
       if (url.pathname === '/api/creators/profile') return sessionStorage.getItem('creatorTestMode') === 'error'
         ? Response.json({ error: 'A rede não disponibilizou os dados desse perfil.' }, { status: 503 })

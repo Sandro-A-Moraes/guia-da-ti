@@ -1,9 +1,11 @@
 import { ArrowUpRight, BookOpen, BriefcaseBusiness, Code, Mail, MessageSquare, Newspaper, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { AboutGuide } from './UserGuide';
 import { CommunityMetrics } from './CommunityMetrics';
 import { Maintainers } from './Maintainers';
 import { Community } from './Community';
+import heroImage from './assets/home/bh-hero.png';
 
 const paths = [
   { label: 'Quero estudar', description: 'Plataformas de cursos, livros e caminhos de estudo.', href: '/plataformas', icon: BookOpen },
@@ -14,19 +16,54 @@ const paths = [
   { label: 'Quero trocar uma ideia', description: 'Pergunte e compartilhe experiências no fórum do Guia.', href: '/forum', icon: MessageSquare },
 ];
 
+const featuredResources = [
+  { label: 'Plataformas de cursos', href: '/plataformas' },
+  { label: 'Notícias', href: '/noticias' },
+  { label: 'Comunidades', href: '/comunidades' },
+  { label: 'Ferramentas', href: '/ferramentas' },
+  { label: 'Vagas', href: '/vagas' },
+  { label: 'Fórum', href: '/forum' },
+];
+
 export function GuideLanding({ dark }: { dark: boolean }) {
-  return <article className="mx-auto w-full max-w-5xl space-y-12 sm:space-y-16">
-    <CommunityMetrics />
-    <section aria-labelledby="por-onde-comecar" className="space-y-6">
-      <div className="max-w-2xl space-y-2">
-        <p className="text-xs font-medium uppercase tracking-widest text-primary">Seu próximo passo</p>
-        <h1 id="por-onde-comecar" className="scroll-mt-28 text-2xl font-semibold tracking-tight sm:text-3xl">Por onde você quer começar?</h1>
+  return <article className="guide-landing mx-auto w-full max-w-5xl">
+    <div className="guide-home-intro">
+      <header className="guide-home-hero">
+        <div className="guide-home-copy">
+          <p className="guide-home-eyebrow">RECURSOS PARA TECNOLOGIA</p>
+          <h1 className="guide-home-title"><span>Descubra seu próximo</span> <span>caminho em tecnologia.</span></h1>
+          <p className="guide-home-description">Recursos, comunidades e um fórum para quem estuda ou trabalha com tecnologia.</p>
+          <nav aria-label="Recursos do Guia" className="guide-home-badges flex flex-wrap gap-2 pt-5">
+            {featuredResources.map(resource => <Badge asChild key={resource.href} variant="outline" className="rounded-full px-3 py-1 hover:bg-accent">
+              <a href={resource.href}>{resource.label}</a>
+            </Badge>)}
+          </nav>
+          <div className="guide-home-actions">
+            <Button asChild size="sm"><a href="#por-onde-comecar">Explorar recursos<ArrowUpRight /></a></Button>
+            <Button asChild size="sm" variant="outline"><a href="/forum">Abrir fórum<ArrowUpRight /></a></Button>
+          </div>
+        </div>
+        <div className="guide-home-visual" aria-hidden="true">
+          <img src={heroImage} alt="" width={1702} height={1037} fetchPriority="high" />
+        </div>
+      </header>
+      <CommunityMetrics />
+      <div className="section-divider section-divider--intro" aria-hidden="true" />
+    </div>
+
+    <section aria-labelledby="por-onde-comecar" className="guide-paths">
+      <div className="guide-paths-heading">
+        <div className="space-y-2">
+          <p className="text-xs font-medium uppercase tracking-widest text-primary">Seu próximo passo</p>
+          <h2 id="por-onde-comecar" className="scroll-mt-28 text-2xl font-semibold tracking-tight sm:text-3xl">Por onde você quer começar?</h2>
+        </div>
         <p className="text-sm leading-relaxed text-muted-foreground">Está começando na área ou procura algo para o trabalho? Escolha um caminho para seguir agora.</p>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {paths.map(({ label, description, href, icon: Icon }) => <a key={href} href={href} className="group rounded-2xl border bg-card p-5 transition-colors hover:border-primary/50 hover:bg-accent/30 focus-visible:outline-2 focus-visible:outline-ring">
-          <div className="mb-5 flex items-center justify-between"><span className="flex size-10 items-center justify-center rounded-xl border border-primary/20 bg-accent/50 text-primary"><Icon className="size-5" /></span><ArrowUpRight aria-hidden="true" className="size-4 text-muted-foreground group-hover:text-primary" /></div>
-          <h3 className="mb-2 font-semibold">{label}</h3>
+      <div className="guide-paths-grid">
+        {paths.map(({ label, description, href, icon: Icon }) => <a key={href} href={href} className="guide-path">
+          <div className="guide-path-meta" aria-hidden="true"><ArrowUpRight className="size-4" /></div>
+          <div className="guide-path-icon" aria-hidden="true"><Icon className="size-7" strokeWidth={1.25} /></div>
+          <h3 className="mb-2 text-lg font-medium tracking-tight">{label}</h3>
           <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
         </a>)}
       </div>

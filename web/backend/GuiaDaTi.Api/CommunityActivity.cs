@@ -3,10 +3,7 @@ public sealed class CommunityActivity(TimeProvider clock)
 {
     private readonly object gate = new();
     private readonly Dictionary<string, DateTimeOffset> seen = new();
-    private int peak;
-    public int Count(string? userId = null) => Snapshot(userId).ActiveUsers;
-
-    public (int ActiveUsers, int PeakActiveUsers) Snapshot(string? userId = null)
+    public int Count(string? userId = null)
     {
         lock (gate)
         {
@@ -14,10 +11,10 @@ public sealed class CommunityActivity(TimeProvider clock)
             foreach (var key in seen.Where(item => item.Value <= now.AddMinutes(-5)).Select(item => item.Key).ToArray())
                 seen.Remove(key);
             if (!string.IsNullOrEmpty(userId)) seen[userId] = now;
-            peak = Math.Max(peak, seen.Count);
-            return (seen.Count, peak);
+            return seen.Count;
         }
     }
+
 }
 
 public static class CommunityActivityEndpoints
@@ -35,8 +32,8 @@ public static class CommunityActivityEndpoints
                     Path = "/api/community"
                 });
             }
-            var snapshot = activity.Snapshot(visitor);
-            return Results.Ok(new { snapshot.ActiveUsers, snapshot.PeakActiveUsers, windowMinutes = 5 });
+            var activeUsers = activity.Count(visitor);
+            return Results.Ok(new { activeUsers, windowMinutes = 5 });
         });
     }
 }
