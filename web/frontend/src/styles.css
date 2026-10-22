@@ -266,7 +266,9 @@ header a[aria-current], footer a[aria-current] { background: var(--accent); colo
 .guide-metric + .guide-metric { border-left: 1px solid var(--guide-line); }
 .guide-metric dd { order: 1; flex: none; font-size: clamp(1.05rem, 1.5vw, 1.35rem); font-variant-numeric: tabular-nums; font-weight: 550; letter-spacing: -.045em; line-height: 1; }
 .guide-metric dt { order: 2; color: var(--muted-foreground); font-size: .68rem; line-height: 1.25; }
-.guide-paths::after { content: ''; display: block; height: clamp(10rem, 22vw, 18rem); margin-inline: calc(50% - 50vw); border-block: 1px dotted var(--guide-line); }
+.section-divider.section-divider--paths { margin-inline: calc(50% - 50vw); }
+.section-divider--paths::before { left: max(0px, calc(50% - 40rem)); }
+.section-divider--paths::after { top: auto; bottom: -3px; right: max(0px, calc(50% - 40rem)); border: 1px solid var(--border); background: var(--background); }
 .guide-paths-heading { display: grid; align-items: end; gap: 1.5rem; padding: clamp(4rem, 8vw, 7rem) clamp(1.25rem, 3vw, 2.5rem); }
 .guide-paths-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1px; border-top: 1px solid var(--guide-line); background: var(--guide-line); }
 .guide-path { display: flex; min-width: 0; flex-direction: column; padding: clamp(1.25rem, 3vw, 2rem); background: var(--background); transition: background-color .15s ease; }

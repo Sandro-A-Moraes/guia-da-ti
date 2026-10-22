@@ -67,6 +67,7 @@ export function GuideLanding({ dark }: { dark: boolean }) {
           <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
         </a>)}
       </div>
+      <div className="section-divider section-divider--paths" aria-hidden="true" />
     </section>
 
     <section id="conheca-o-guia" aria-labelledby="como-o-guia-funciona" className="scroll-mt-28 space-y-6">
