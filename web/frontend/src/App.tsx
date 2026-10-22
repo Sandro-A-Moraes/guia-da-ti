@@ -146,8 +146,10 @@ function ResourceRow({ resource, platform, locationColumn = false, sponsored = f
 export function App({ path }: { path: string }) {
   const page = pageInfo(path);
   const home = path === '/';
+  const forumPage = path === '/forum';
   const creatorsPage = path === '/criadores';
   const communitiesPage = path === '/comunidades';
+  const communitiesActive = communitiesPage || page.category?.id === 'communities';
   const sponsoredPlacement: SponsoredPlacement | null = creatorsPage ? 'creators' : communitiesPage ? 'communities' : page.category && (studyTypes.has(page.category.id) || page.category.id === 'tutorials') ? 'studying' : ['events', 'meetups', 'conferences', 'hackathons'].includes(page.category?.id || '') ? 'networking' : null;
   const [communitySelection, setCommunitySelection] = useState<CommunityFilters>(emptyCommunityFilters);
   const [dark, setDark] = useState(false);
@@ -256,7 +258,9 @@ export function App({ path }: { path: string }) {
           <NavigationMenu viewport={false} aria-label="Principal" className="!static pointer-events-auto min-w-0 flex">
             <NavigationMenuList className="flex-nowrap gap-0.5">
               <NavigationMenuItem><NavigationMenuLink asChild active={home}><a href="/" aria-current={home ? 'page' : undefined}>Início</a></NavigationMenuLink></NavigationMenuItem>
-              {groups.map(group => ['creators', 'communities'].includes(group.id) ? (
+              <NavigationMenuItem><NavigationMenuLink asChild active={forumPage}><a href="/forum" aria-current={forumPage ? 'page' : undefined}>Fórum</a></NavigationMenuLink></NavigationMenuItem>
+              <NavigationMenuItem><NavigationMenuLink asChild active={communitiesActive}><a href="/comunidades" aria-current={communitiesActive ? 'page' : undefined}>Comunidades</a></NavigationMenuLink></NavigationMenuItem>
+              {groups.filter(group => group.id !== 'communities').map(group => ['creators'].includes(group.id) ? (
                 <NavigationMenuItem key={group.id}><NavigationMenuLink asChild active={page.category?.id === group.id}><a href={'/' + group.categories[0].route} aria-current={page.category?.id === group.id ? 'page' : undefined}>{group.name}</a></NavigationMenuLink></NavigationMenuItem>
               ) : (
                 <NavigationMenuItem key={group.id} value={group.id} className="!static">
@@ -277,9 +281,6 @@ export function App({ path }: { path: string }) {
                   </NavigationMenuContent>
                 </NavigationMenuItem>
               ))}
-              <NavigationMenuItem value="sobre">
-                <NavigationMenuLink asChild active={path === '/sobre'}><a href="/sobre" aria-current={path === '/sobre' ? 'page' : undefined} className="inline-flex h-9 items-center rounded-md px-3 text-sm font-medium hover:bg-accent hover:text-primary">Sobre</a></NavigationMenuLink>
-              </NavigationMenuItem>
             </NavigationMenuList>
           </NavigationMenu>
           </div>
@@ -295,8 +296,10 @@ export function App({ path }: { path: string }) {
                 <nav aria-label="Navegação para celular" className="flex flex-1 flex-col overflow-y-auto px-4 py-4">
                   <div className="overflow-hidden border divide-y">
                     <SheetClose asChild><Button asChild size="menu" variant={home ? 'secondary' : 'ghost'} className="min-h-11 rounded-none"><a href="/" aria-current={home ? 'page' : undefined}>Início</a></Button></SheetClose>
+                    <SheetClose asChild><Button asChild size="menu" variant={forumPage ? 'secondary' : 'ghost'} className="min-h-11 rounded-none"><a href="/forum" aria-current={forumPage ? 'page' : undefined}>Fórum</a></Button></SheetClose>
+                    <SheetClose asChild><Button asChild size="menu" variant={communitiesActive ? 'secondary' : 'ghost'} className="min-h-11 rounded-none"><a href="/comunidades" aria-current={communitiesActive ? 'page' : undefined}>Comunidades</a></Button></SheetClose>
                     <Accordion.Root type="single" collapsible className="divide-y" defaultValue={groups.find(group => group.categories.some(category => category.id === page.category?.id))?.id}>
-                    {groups.map(group => ['creators', 'communities'].includes(group.id) ? (
+                    {groups.filter(group => group.id !== 'communities').map(group => ['creators'].includes(group.id) ? (
                       <SheetClose asChild key={group.id}><Button asChild size="menu" variant={page.category?.id === group.id ? 'secondary' : 'ghost'} className="rounded-none"><a href={'/' + group.categories[0].route} aria-current={page.category?.id === group.id ? 'page' : undefined}>{group.name}</a></Button></SheetClose>
                     ) : (
                       <Accordion.Item key={group.id} value={group.id}>
@@ -315,7 +318,6 @@ export function App({ path }: { path: string }) {
                       </Accordion.Item>
                     ))}
                     </Accordion.Root>
-                    <SheetClose asChild><Button asChild size="menu" variant={path === '/sobre' ? 'secondary' : 'ghost'} className="min-h-11 rounded-none text-sm font-medium"><a href="/sobre" aria-current={path === '/sobre' ? 'page' : undefined}>Sobre</a></Button></SheetClose>
                     <SheetClose asChild><Button size="menu" variant="ghost" className="min-h-11 rounded-none text-sm font-medium" onClick={() => setTimeout(() => openContribution(), 0)}>Contribuir</Button></SheetClose>
                   </div>
                 </nav>
@@ -331,18 +333,18 @@ export function App({ path }: { path: string }) {
         {!page.valid ? (
           <Empty><EmptyHeader><EmptyTitle>Página não encontrada</EmptyTitle><EmptyDescription>Não encontramos esta página no Guia.</EmptyDescription></EmptyHeader><EmptyContent><Button asChild><a href="/">Voltar ao início</a></Button></EmptyContent></Empty>
         ) : home ? (
-          <div className="flex flex-1 flex-col gap-8"><Discussions className="w-full flex-1" /><div className="section-divider" aria-hidden="true" /><Community area="supporters" preview /></div>
+          <GuideLanding dark={dark} />
+        ) : forumPage ? (
+          <Discussions className="w-full flex-1" />
         ) : path === '/admin/anuncios' ? (
           <AdvertisingAdmin />
         ) : path === '/divulgue' || path === '/empresas' ? (
           <Companies dark={dark} />
-        ) : path === '/sobre' ? (
-          <GuideLanding dark={dark} />
         ) : page.resource ? (
           <article className="mx-auto w-full max-w-4xl space-y-5">
             <section aria-label="Apresentação do recurso" className="overflow-hidden rounded-lg border bg-card">
             <header className="flex flex-col gap-5 border-b p-4 sm:flex-row sm:items-center sm:p-6">
-              <div className="min-w-0 flex-1 space-y-3"><div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2"><a href={page.category!.id === 'youtube' ? '/criadores?plataforma=youtube' : page.category!.id === 'courses' ? '/sobre#por-onde-comecar' : `/${page.category!.route}`} className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"><ArrowLeft aria-hidden="true" className="size-4" />{page.category!.id === 'youtube' ? 'Criadores no YouTube' : page.category!.id === 'courses' ? 'Ver categorias' : page.category!.name}</a>{page.resource.demo && <Badge variant="outline">Exemplo fictício</Badge>}</div><h1 className="text-3xl font-semibold tracking-tight">{page.resource.name}</h1><p className="text-sm leading-relaxed text-muted-foreground">{page.resource.summary}</p></div>
+              <div className="min-w-0 flex-1 space-y-3"><div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2"><a href={page.category!.id === 'youtube' ? '/criadores?plataforma=youtube' : page.category!.id === 'courses' ? '/#por-onde-comecar' : `/${page.category!.route}`} className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"><ArrowLeft aria-hidden="true" className="size-4" />{page.category!.id === 'youtube' ? 'Criadores no YouTube' : page.category!.id === 'courses' ? 'Ver categorias' : page.category!.name}</a>{page.resource.demo && <Badge variant="outline">Exemplo fictício</Badge>}</div><h1 className="text-3xl font-semibold tracking-tight">{page.resource.name}</h1><p className="text-sm leading-relaxed text-muted-foreground">{page.resource.summary}</p></div>
               {(studyTypes.has(page.resource.type) || page.resource.imageUrl) && <div className="w-full shrink-0 overflow-hidden rounded-lg border sm:w-48"><StudyCover resource={page.resource} priority /></div>}
             </header>
             <div className="flex flex-col gap-5 p-4 sm:p-6">

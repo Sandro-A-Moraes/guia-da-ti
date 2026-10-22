@@ -10,10 +10,8 @@ export async function installDiscussionFixtures(send) {
     window.fetch = async (input, options) => {
       const url = new URL(String(input), location.origin);
       if (url.pathname === '/api/contributions/notices') return Response.json({stream:'test',cursor:window.noticeItems.length,items:url.searchParams.get('stream')==='test'?window.noticeItems.slice(Number(url.searchParams.get('after'))):[]});
-      if (url.pathname === '/api/community/users') return sessionStorage.getItem('registeredTestMode') === 'error'
-        ? new Response('{}', { status: 503 }) : Response.json({ registeredUsers: 37, trackingSince: '2026-10-06T12:00:00Z' });
       if (url.pathname === '/api/community/activity') return sessionStorage.getItem('activityTestMode') === 'error'
-        ? new Response('{}', { status: 503 }) : Response.json({ activeUsers: 12, windowMinutes: 5 });
+        ? new Response('{}', { status: 503 }) : Response.json({ activeUsers: 12, peakActiveUsers: 18, windowMinutes: 5 });
       if (url.pathname === '/api/contributors') return Response.json({ items: Array.from({ length: 10 }, (_, index) => ({ name: index === 0 ? 'ana' : 'person' + index, url: 'https://github.com/' + (index === 0 ? 'ana' : 'person' + index), avatarUrl: location.origin + '/favicon.svg', contributions: 5 })) });
       if (url.pathname === '/api/creators/profile') return sessionStorage.getItem('creatorTestMode') === 'error'
         ? Response.json({ error: 'A rede não disponibilizou os dados desse perfil.' }, { status: 503 })
@@ -142,7 +140,7 @@ export async function checkDiscussions({ send, evaluate, click, waitFor, navigat
   await click(button('Próxima'));
   await waitFor(`document.querySelector('main').textContent.includes('Segundo comentário')`);
   await mode('locked');
-  await navigate('/?conversa=7');
+  await navigate('/forum?conversa=7');
   await waitFor(`document.querySelector('main').textContent.includes('Conversa encerrada')`);
   assert.equal(await evaluate(`document.querySelector('main').textContent.includes('Responder no GitHub')`), false);
   await send('Emulation.setDeviceMetricsOverride', { width: 320, height: 844, deviceScaleFactor: 1, mobile: false });
@@ -213,7 +211,7 @@ export async function checkDiscussions({ send, evaluate, click, waitFor, navigat
   await waitFor(`window.lastPublication?.body === 'Minha resposta'`);
   assert.equal(await evaluate(`window.lastPublication.replyToId`), 'comment-1');
   await evaluate(`sessionStorage.setItem('participationMode', 'error')`);
-  await navigate('/?conversa=7');
+  await navigate('/forum?conversa=7');
   await waitFor(`!!${button('Participe da conversa…')}`);
   await click(button('Participe da conversa…'));
   await click(`document.querySelector('textarea')`);
@@ -225,14 +223,9 @@ export async function checkDiscussions({ send, evaluate, click, waitFor, navigat
   await navigate('/?conversa=7');
   await waitFor(`document.querySelector('main').textContent.includes('Conversa encerrada')`);
   assert.equal(await evaluate(`!!${button('Participe da conversa…')} || !!${button('Responder')}`), false);
-  for (const [path, title] of [['/comunidades', 'Comunidades'], ['/sobre', 'Sobre o Guia da TI']]) {
+  for (const [path, title] of [['/comunidades', 'Comunidades'], ['/forum', 'F\u00f3rum da comunidade']]) {
     await navigate(`${path}/`);
     assert.equal(await evaluate(`document.querySelector('main h1').textContent`), title);
-    if (path === '/sobre') { await waitFor(`!!document.querySelector('#mantenedores a[href="https://github.com/ana"] img')`); assert.equal(await evaluate(`document.querySelector('#mantenedores h2').textContent`), 'Mantenedores'); }
-    if (path === '/sobre') {
-      assert.equal(await evaluate(`!!document.querySelector('#apoiadores a[href="https://www.hostgator.com.br/"]')`), true);
-      assert.equal(await evaluate(`document.querySelector('[aria-label="Principal"] a[href="/sobre"]').getAttribute('aria-current')`), 'page');
-    }
   }
   await mode('suggestion');
   await navigate('/?conversa=7');

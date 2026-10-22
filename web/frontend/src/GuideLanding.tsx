@@ -11,15 +11,16 @@ const paths = [
   { label: 'Quero encontrar pessoas', description: 'Comunidades para conversar e trocar experiências.', href: '/comunidades', icon: Users },
   { label: 'Quero praticar', description: 'Desafios e projetos para aplicar o que aprendi.', href: '/desafios', icon: Code },
   { label: 'Quero crescer na carreira', description: 'Sites de vagas e oportunidades de mentoria.', href: '/vagas', icon: BriefcaseBusiness },
-  { label: 'Quero trocar uma ideia', description: 'O fórum do Guia para perguntar e compartilhar.', href: '/', icon: MessageSquare },
+  { label: 'Quero trocar uma ideia', description: 'Pergunte e compartilhe experiências no fórum do Guia.', href: '/forum', icon: MessageSquare },
 ];
 
 export function GuideLanding({ dark }: { dark: boolean }) {
   return <article className="mx-auto w-full max-w-5xl space-y-12 sm:space-y-16">
+    <CommunityMetrics />
     <section aria-labelledby="por-onde-comecar" className="space-y-6">
       <div className="max-w-2xl space-y-2">
         <p className="text-xs font-medium uppercase tracking-widest text-primary">Seu próximo passo</p>
-        <h2 id="por-onde-comecar" className="scroll-mt-28 text-2xl font-semibold tracking-tight sm:text-3xl">Por onde você quer começar?</h2>
+        <h1 id="por-onde-comecar" className="scroll-mt-28 text-2xl font-semibold tracking-tight sm:text-3xl">Por onde você quer começar?</h1>
         <p className="text-sm leading-relaxed text-muted-foreground">Está começando na área ou procura algo para o trabalho? Escolha um caminho para seguir agora.</p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -39,8 +40,6 @@ export function GuideLanding({ dark }: { dark: boolean }) {
       </div>
       <AboutGuide dark={dark} />
     </section>
-
-    <CommunityMetrics />
 
     <section className="space-y-12">
       <section aria-labelledby="contribuidores-heading" className="space-y-5">

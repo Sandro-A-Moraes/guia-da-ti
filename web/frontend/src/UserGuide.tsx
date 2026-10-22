@@ -213,8 +213,8 @@ export function UserGuide({ dark: _dark }: { dark: boolean }) {
       <div className="site-frame mx-auto grid max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 px-4 py-3 sm:flex sm:flex-nowrap sm:px-6">
         <CircleHelp aria-hidden="true" className="size-5 shrink-0 text-primary" />
         <p className="min-w-0 text-sm sm:flex-1"><span className="font-medium">Novo por aqui?</span>{' '}<span className="text-muted-foreground">Veja as dicas para usar o Guia.</span><span aria-hidden="true" className="ml-2 inline-flex items-center gap-1 whitespace-nowrap text-primary underline underline-offset-4 sm:hidden">Como usar o Guia<ArrowUpRight className="size-4" /></span></p>
-        <a href="/sobre" aria-label="Abrir dicas para usar o Guia" className="absolute inset-0 z-[1] sm:hidden" />
-        <Button asChild variant="outline" className="hidden sm:order-none sm:ml-auto sm:inline-flex"><a href="/sobre">Como usar o Guia<ArrowUpRight /></a></Button>
+        <a href="/#conheca-o-guia" aria-label="Abrir dicas para usar o Guia" className="absolute inset-0 z-[1] sm:hidden" />
+        <Button asChild variant="outline" className="hidden sm:order-none sm:ml-auto sm:inline-flex"><a href="/#conheca-o-guia">Como usar o Guia<ArrowUpRight /></a></Button>
         <Button variant="ghost" size="icon" className="relative z-10 col-start-3 row-start-1 shrink-0 sm:order-3 sm:ml-0" aria-label="Fechar barra de dicas" title="Não mostrar novamente neste navegador" onClick={dismiss}><X /></Button>
       </div>
     </aside>;

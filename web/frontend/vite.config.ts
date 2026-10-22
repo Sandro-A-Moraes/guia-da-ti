@@ -10,7 +10,20 @@ function canonicalLocalHost(request: IncomingMessage, response: ServerResponse, 
   if (host && /^127\.0\.0\.1(?::\d+)?$/.test(host)) {
     response.writeHead(302, { Location: `http://${host.replace('127.0.0.1', 'localhost')}${request.url || '/'}` });
     response.end();
-  } else next();
+    return;
+  }
+  if (request.url?.split('?')[0].replace(/\/$/, '') === '/sobre') {
+    response.writeHead(308, { Location: `/${request.url.includes('?') ? request.url.slice(request.url.indexOf('?')) : ''}` });
+    response.end();
+    return;
+  }
+  const url = new URL(request.url || '/', 'http://localhost');
+  if (url.pathname === '/' && url.searchParams.has('conversa')) {
+    response.writeHead(308, { Location: `/forum${url.search}` });
+    response.end();
+    return;
+  }
+  next();
 }
 export default defineConfig(({ isSsrBuild }) => ({
   plugins: [react(), tailwindcss(), {

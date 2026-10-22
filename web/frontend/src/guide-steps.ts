@@ -11,7 +11,7 @@ export const guideSteps = [
     id: 'explore', label: 'Encontre o que procura', category: 'Explore',
     description: 'Use os menus para estudar, se informar, fazer networking, praticar ou procurar oportunidades. Nas listagens, pesquise pelo nome ou assunto.',
     tip: 'Combine a pesquisa com os filtros para reduzir a lista.',
-    action: 'Ver categorias', href: '/sobre#por-onde-comecar',
+    action: 'Ver categorias', href: '/#por-onde-comecar',
   },
   {
     id: 'communities', label: 'Encontre sua comunidade', category: 'Comunidades',
@@ -111,7 +111,7 @@ export const aboutGuideSteps: readonly GuideStep[] = [
     id: 'about', label: 'Um guia de links feito pela comunidade', category: 'O projeto',
     description: 'O Guia reúne indicações de sites, conteúdos e oportunidades de tecnologia. Você explora por categoria e acessa o conteúdo na página de origem.',
     tip: 'Cursos e atividades ficam nos sites indicados. Aqui, você encontra os links e pode trocar experiências no fórum.',
-    action: 'Ver categorias', href: '/sobre#por-onde-comecar',
+    action: 'Ver categorias', href: '/#por-onde-comecar',
   },
   guideSteps.find(step => step.id === 'forum')!,
   {
@@ -124,7 +124,7 @@ export const aboutGuideSteps: readonly GuideStep[] = [
     id: 'transparency', label: 'Você pode acompanhar o projeto', category: 'Aberto e colaborativo',
     description: 'O catálogo e seu histórico ficam públicos no GitHub. Em Sobre, você encontra os mantenedores e as empresas que apoiam o Guia.',
     tip: 'Itens marcados como Exemplo fictício servem para demonstrar a navegação. Eles não são indicações de recursos reais.',
-    action: 'Ver mantenedores', href: '/sobre#mantenedores',
+    action: 'Ver mantenedores', href: '/#mantenedores',
   },
 ];
 

@@ -86,19 +86,18 @@ try {
   await checkRouteFlash({send,evaluate,waitFor,navigate});
   assert.equal(await evaluate(`!!document.querySelector('main [aria-label="Patrocínio master"]')`), false);
   assert.equal(await evaluate(`!!document.querySelector('main #apoiadores')`), true);
-  assert.equal(await evaluate(`document.querySelector('main #apoiadores a[href="/sobre/#contato"]').textContent`), 'Apoie o Guia');
+  assert.equal(await evaluate(`document.querySelector('main #apoiadores a[href="/#contato"]').textContent`), 'Apoie o Guia');
   assert.equal(await evaluate(`[...document.querySelectorAll('[data-slot="navigation-menu-trigger"]')].some(element => element.textContent.trim() === 'Projeto')`), false);
-  assert.equal(await evaluate(`!!document.querySelector('[aria-label="Principal"] a[href="/sobre"]')`), true);
+  assert.equal(await evaluate(`!!document.querySelector('[aria-label="Principal"] a[href="/forum"]')`), true);
   for (const path of ['/apoiadores', '/apoiadores/']) {
     const redirect = await fetch(base + path, { redirect: 'manual' });
     assert.equal(redirect.status, 301);
-    assert.equal(redirect.headers.get('location'), '/sobre#apoiadores');
+    assert.equal(redirect.headers.get('location'), '/#apoiadores');
   }
-  assert.equal(await evaluate(`document.querySelectorAll('footer a[href="/sobre"], footer a[href="/apoiadores"]').length`), 0);
   await waitFor(`document.querySelector('footer').textContent.includes('12 usuários ativos')`);
   await waitFor(`!!document.querySelector('footer [aria-label="Mantenedores"] a img')`);
   assert.equal(await evaluate(`document.querySelectorAll('footer [aria-label="Mantenedores"] a img').length`), 8);
-  assert.equal(await evaluate(`document.querySelector('footer a[href="/sobre#mantenedores"]').textContent.trim()`), '+2 mais');
+  assert.equal(await evaluate(`document.querySelector('footer a[href="/#mantenedores"]').textContent.trim()`), '+2 mais');
   const footerCenters = await evaluate(`[...document.querySelector('footer .site-frame').children].map(element => {const rect=element.getBoundingClientRect();return rect.y+rect.height/2})`);
   assert.ok(Math.max(...footerCenters) - Math.min(...footerCenters) < 2, JSON.stringify(footerCenters));
   assert.ok(await evaluate(`(()=>{const frame=document.querySelector('footer .site-frame'), bounds=frame.getBoundingClientRect(), online=frame.children[1].getBoundingClientRect();return Math.abs(online.x+online.width/2-(bounds.x+bounds.width/2))<2})()`));
@@ -261,32 +260,28 @@ try {
   const footerBounds = await evaluate(`(()=>{const r=document.querySelector('footer').getBoundingClientRect();return {bottom:r.bottom,left:r.left,right:r.right,viewport:document.documentElement.getBoundingClientRect().width,height:innerHeight}})()`);
   assert.ok(Math.abs(footerBounds.bottom - footerBounds.height) <= 1 && footerBounds.left === 0 && Math.abs(footerBounds.right - footerBounds.viewport) <= 1, JSON.stringify(footerBounds));
   assert.equal(await evaluate(`!!document.querySelector('footer a[href="https://fulldev.com.br"]')`), true);
-  await navigate('/sobre/');
-  assert.equal(await evaluate(`document.querySelector('h1').textContent`), 'Sobre o Guia da TI');
-  await waitFor(`document.querySelector('[aria-label="O Guia em números"] dd').textContent === '37'`);
+  await navigate('/');
+  await waitFor(`document.querySelector('[aria-label="O Guia em números"] dd').textContent === '18'`);
   await waitFor(`!!document.querySelector('#mantenedores a img')`);
   await hover(`document.querySelector('#mantenedores a')`);
   await waitFor(`document.querySelector('[role="tooltip"]')?.textContent.includes('ana')`);
   assert.equal(await evaluate(`document.querySelectorAll('[aria-label="O Guia em números"] dt').length`), 4);
-  await waitFor(`document.querySelectorAll('[aria-label="O Guia em números"] dd')[0].textContent === '37'`);
+  await waitFor(`document.querySelectorAll('[aria-label="O Guia em números"] dd')[0].textContent === '18'`);
   assert.equal(await evaluate(`document.querySelectorAll('[aria-label="O Guia em números"] dd')[2].textContent`), new Intl.NumberFormat('pt-BR').format(catalog.resources.filter(resource => !resource.demo).length));
   for (const width of [320, 390, 768, 1440]) {
     await send('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: false });
     assert.equal(await evaluate(`document.documentElement.scrollWidth <= innerWidth`), true, `About overflow at ${width}px`);
   }
   await evaluate(`sessionStorage.setItem('activityTestMode', 'error')`);
-  await navigate('/sobre/');
+  await navigate('/');
   await waitFor(`document.querySelector('footer').textContent.includes('Atividade indisponível')`);
-  assert.equal(await evaluate(`document.querySelector('[aria-label="O Guia em números"] dd').textContent`), '37');
+  assert.equal(await evaluate(`document.querySelector('[aria-label="O Guia em números"] dd').textContent`), String.fromCharCode(0x2014));
   assert.equal(await evaluate(`document.querySelector('[aria-label="O Guia em números"]').textContent.includes('Usuários ativos')`), false);
-  assert.equal(await evaluate(`document.querySelectorAll('[aria-label="O Guia em números"] dd')[0].textContent`), '37');
+  assert.equal(await evaluate(`document.querySelectorAll('[aria-label="O Guia em números"] dd')[0].textContent`), String.fromCharCode(0x2014));
   await evaluate(`sessionStorage.removeItem('activityTestMode')`);
-  await evaluate(`sessionStorage.setItem('registeredTestMode', 'error')`);
-  await navigate('/sobre/');
-  await waitFor(`document.querySelector('[aria-label="O Guia em números"]').textContent.includes('O total de contas que já entraram está indisponível')`);
-  assert.equal(await evaluate(`document.querySelectorAll('[aria-label="O Guia em números"] dd')[0].textContent`), '—');
-  await waitFor(`document.querySelector('footer').textContent.includes('12 usuários ativos')`);
-  await evaluate(`sessionStorage.removeItem('registeredTestMode')`);
+  await navigate('/');
+  await waitFor(`document.querySelector('[aria-label="O Guia em n\u00fameros"] dd').textContent === '18'`);
+  await waitFor(`document.querySelector('footer').textContent.includes('12 usu\u00e1rios ativos')`);
   await navigate('/');
   await click(`document.querySelector('[aria-label="Ativar tema escuro"]')`);
   await waitFor(`document.documentElement.classList.contains('dark')`);

@@ -22,7 +22,7 @@ export function Community({ area, preview = false, embedded = false }: { area: '
       <div className="supporters-invite rounded-2xl border bg-card">
         <p className="text-sm text-muted-foreground">Empresas que apoiam o Guia.</p>
         <p className="supporters-invite-title font-medium tracking-tight">Mais pessoas descobrindo tecnologia.</p>
-        <Button asChild className="mt-auto self-start"><a href="/sobre/#contato">Apoie o Guia<ArrowUpRight aria-hidden="true" /></a></Button>
+        <Button asChild className="mt-auto self-start"><a href="/#contato">Apoie o Guia<ArrowUpRight aria-hidden="true" /></a></Button>
       </div>
       {Array.from({ length: spaces }, (_, index) => {
         const entry = entries[index];

@@ -60,9 +60,9 @@ O workflow testa e gera uma imagem Docker antes de publicar na VPS por SSH. O pr
 
 Frontend e backend devem usar o mesmo snapshot. Nunca coloque segredos em variáveis `VITE_*`.
 
-## Conversas da comunidade
+## Fórum da comunidade
 
-O **Início** mostra conversas e anúncios do fórum, com os apoiadores logo abaixo. Os mantenedores aparecem como fotos no rodapé e em **Sobre**. Passe o mouse ou use o teclado para ver o nome e as contribuições de cada pessoa. A integração consulta o GitHub Discussions pela API .NET. A lista mostra 20 tópicos por página e permite filtrar por categoria. Cada tópico mostra 20 comentários por página. Cada comentário mostra até cinco respostas, com link para continuar a leitura no GitHub. Com o login GitHub configurado, o visitante pode criar tópicos, comentar e responder pelo Guia. A publicação usa a autorização do visitante. A credencial de leitura do servidor nunca publica. Links para participar no GitHub continuam disponíveis.
+O fórum fica em `/forum`. A integração usa o GitHub Discussions pela API .NET. Pessoas autenticadas pelo GitHub podem criar tópicos, comentar e responder.
 
 Para conectar dados reais:
 
@@ -73,13 +73,13 @@ Para conectar dados reais:
 
 Sem credencial, a página mostra que o espaço está em preparação. Configuração inválida, serviço indisponível e lista vazia têm estados distintos. A API recusa repositórios privados e mantém um cache em memória por um minuto. Tópicos e comentários são exibidos como texto, sem executar HTML. Comentários ocultados pela moderação não têm seu conteúdo exposto. A configuração não ativa Discussions nem cria publicações automaticamente.
 
-Endpoints: `GET /api/discussions?category=ID&after=CURSOR` e `GET /api/discussions/{numero}?after=CURSOR`. Um tópico pode ser compartilhado pelo endereço `/?conversa=NUMERO`.
+Endpoints: `GET /api/discussions?category=ID&after=CURSOR` e `GET /api/discussions/{numero}?after=CURSOR`. Compartilhe tópicos pelo endereço `/forum?conversa=NUMERO`.
 
 Referência: [API GraphQL para Discussions](https://docs.github.com/en/graphql/guides/using-the-graphql-api-for-discussions).
 
 Consulte o [guia de moderação do fórum](docs/moderacao-forum.md) para tratar spam e avaliar limites temporários do GitHub.
 
-O **Início** apresenta o fórum sem título visível, com busca, categoria e criação de tópico em uma barra compacta. A lista mostra autor, data, prévia de texto e comentários, separados por linhas. Há um espaço identificado como Publicidade entre os tópicos (ou após o único tópico, em listas com um item). O componente `Advertisement.tsx` reserva a posição e não carrega campanhas, scripts de anúncios ou rastreadores.
+A rota `/forum` apresenta tópicos com busca e filtro por categoria. Cada página lista 20 tópicos e até 20 comentários. Respostas encadeadas mostram cinco itens e um link para continuar no GitHub.
 
 A pesquisa acontece ao digitar, após uma pausa de 400 ms, e também ao pressionar Enter. Dentro do tópico, os comentários e respostas aparecem com linhas de encadeamento e podem ser recolhidos. A publicidade fica entre o tópico e o campo para comentar, em um cartão com menu para consultar o espaço reservado. O GitHub mantém respostas vinculadas ao comentário principal. A interface preserva essa estrutura.
 
@@ -97,7 +97,7 @@ A página consulta a sessão ao receber foco e a cada minuto enquanto está vis�
 
 Uma barra abaixo do menu mostra o botão **Como usar o Guia**, que abre um diálogo com dicas para cada seção. Você pode fechar a barra. O navegador salva essa escolha e mantém a barra oculta nas próximas visitas, inclusive ao trocar de página. A linha do tempo acompanha a rolagem com GSAP. As demonstrações usam o [player do Hyperframes](https://hyperframes.app/docs/5-packages/player), com arquivos locais e carregamento apenas quando entram na área visível. Você pode pausar cada demonstração. A preferência de movimento reduzido mostra as cenas estáticas. O diálogo usa os componentes de botão e diálogo do shadcn.
 
-Ao lado dos títulos das listagens, o botão de dicas explica por que usar a seção e como escolher entre as opções. As dicas de cada categoria abrem mesmo depois de fechar a barra. Sobre apresenta o projeto em uma linha do tempo com demonstrações. **Primeira vez no GitHub?** abre outro passo a passo, desde criar a conta até participar pelo Guia.
+Ao lado dos títulos das listagens, o botão de dicas explica por que usar a seção e como escolher entre as opções. As dicas de cada categoria abrem mesmo depois de fechar a barra. A página inicial apresenta o projeto em uma linha do tempo com demonstrações. **Primeira vez no GitHub?** abre outro passo a passo, desde criar a conta até participar pelo Guia.
 
 As dicas das categorias têm quatro etapas: **O que é**, **Por que vale a pena**, **Como escolher** e **Como usar esta seção**. Cada etapa mostra sua própria demonstração, com pausa e carregamento conforme entra na área visível.
 
@@ -107,17 +107,17 @@ Endpoints: `GET /api/auth/session`, `GET /api/auth/login`, callback OAuth em `/a
 
 ### Contas únicas que já entraram
 
-O Sobre mostra **Contas que já entraram**, separado dos visitantes ativos. `GET /api/community/users` retorna apenas `registeredUsers` e `trackingSince`, sem cache. Cada login concluído registra o ID estável da conta do GitHub uma vez, mesmo depois de trocar o nome, sair, entrar novamente ou reiniciar o servidor. Sessões autenticadas que já estavam abertas também entram no registro na próxima consulta à sessão. Não são armazenados nomes, tokens ou senhas. O histórico começa nesta implementação. Acessos antigos sem registro não podem ser recuperados.
+O servidor registra contas que entraram com GitHub uma vez por ID. A página inicial não exibe esse total. `GET /api/community/users` retorna `registeredUsers` e `trackingSince`, sem cache.
 
 O registro fica por padrão em `App_Data/community-users.json`, fora do Git, dos arquivos públicos e dos artefatos de publicação. Para produção, defina `COMMUNITY_USERS_PATH` com o caminho absoluto de um arquivo em armazenamento persistente, por exemplo `/var/lib/guia-da-ti/community-users.json`, e preserve esse arquivo nas atualizações e backups. O diretório precisa permitir escrita pelo processo do site. Essa camada usa um arquivo com gravação atômica para uma única instância. Múltiplos processos ou réplicas precisam de um registro compartilhado com controle de concorrência. Se a leitura falhar, o site mostra indisponibilidade. Falhas de gravação são registradas no servidor e não bloqueiam o login.
 
 ### Apoiadores e mantenedores
 
-Os apoiadores aparecem no **Início**, abaixo do fórum e em `/sobre#apoiadores`, a partir da lista `supporters` em `community.json` no repositório de dados. Cada registro contém `{ "name": "Nome", "url": "https://…", "description": "Descrição curta" }`. O build valida campos, tamanhos, links HTTPS e duplicados. A HostGator é a primeira apoiadora cadastrada. Novos apoiadores entram por PR no repositório de dados. Depois, atualize o ponteiro do submódulo na aplicação.
+Os apoiadores aparecem na página inicial em `/#apoiadores`. O build valida a lista `supporters` em `community.json`, incluindo campos, URLs HTTPS e duplicados. Novos apoiadores entram por PR no repositório de dados. Depois, atualize o ponteiro do submódulo.
 
-O Início mantém os apoiadores abaixo do fórum. A página Sobre apresenta contas únicas que já entraram com GitHub, recursos reais (exclui exemplos fictícios), categorias e empresas apoiadoras. O indicador de atividade aparece apenas no rodapé. O rodapé alinha o crédito à esquerda, a atividade ao centro e até 8 avatares de mantenedores à direita, com um link para os demais. `GET /api/community/activity` retorna apenas `activeUsers` e `windowMinutes`, sem cache e sem dados pessoais. A contagem considera navegadores distintos com a página visível nos últimos cinco minutos, incluindo visitantes sem login. Um cookie anônimo de sessão, HttpOnly e SameSite Strict, identifica o navegador sem usar dados do GitHub. Várias abas contam uma vez. A página visível renova a presença a cada minuto, ao receber foco e ao voltar a ficar visível. A presença fica em memória por instância, expira após cinco minutos e reinicia quando o servidor reinicia. Múltiplas réplicas exigem um armazenamento compartilhado para uma contagem global. Falhas de leitura aparecem como indisponibilidade, sem simular um zero.
+A página inicial reúne a apresentação do Guia, o pico de acesso e a comunidade. O indicador ao vivo aparece no rodapé. `GET /api/community/activity` retorna `activeUsers`, `peakActiveUsers` e `windowMinutes`, sem cache ou dados pessoais. A contagem considera visitantes distintos com a página visível nos últimos cinco minutos. Um cookie anônimo HttpOnly e SameSite Strict identifica o navegador. Várias abas contam uma vez. A presença renova a cada minuto e fica na memória de cada instância. O registro expira após cinco minutos e reinicia quando o servidor reinicia. Um pico global entre réplicas exige armazenamento compartilhado.
 
-Os mantenedores de `/sobre#mantenedores` vêm diretamente de `GET /api/contributors`, que consulta a API de contribuidores do GitHub nos repositórios públicos disponíveis, percorre todas as páginas e reúne os usuários pelo ID sem duplicados. Bots e autores anônimos não aparecem. A lista representa autores de commits reconhecidos pelo GitHub, com a soma das contribuições nos repositórios. Não inclui automaticamente participantes de issues ou Discussions. O servidor mantém cache por uma hora, e o próprio GitHub pode atrasar o reconhecimento de novos commits. A consulta pública funciona sem login do visitante; `DISCUSSIONS_TOKEN`, quando configurado, também autentica essas consultas no servidor. O servidor ignora repositórios privados ou indisponíveis e mantém os mantenedores dos repositórios públicos acessíveis.
+Os mantenedores de `/#mantenedores` vêm diretamente de `GET /api/contributors`, que consulta a API de contribuidores do GitHub nos repositórios públicos disponíveis, percorre todas as páginas e reúne os usuários pelo ID sem duplicados. Bots e autores anônimos não aparecem. A lista representa autores de commits reconhecidos pelo GitHub, com a soma das contribuições nos repositórios. Não inclui automaticamente participantes de issues ou Discussions. O servidor mantém cache por uma hora, e o próprio GitHub pode atrasar o reconhecimento de novos commits. A consulta pública funciona sem login do visitante; `DISCUSSIONS_TOKEN`, quando configurado, também autentica essas consultas no servidor. O servidor ignora repositórios privados ou indisponíveis e mantém os mantenedores dos repositórios públicos acessíveis.
 
 `GITHUB_APP_REPOSITORY` define o repositório da aplicação, com padrão `guia-da-ti/guia-da-ti`. O repositório de dados usa `DISCUSSIONS_REPOSITORY`. Atualize ambos após transferir os repositórios para uma organização.
 
@@ -133,11 +133,11 @@ dotnet run --project web/backend/GuiaDaTi.Api.Tests
 ./scripts/smoke.ps1
 ```
 
-O **Início** mostra conversas e anúncios do fórum, com os apoiadores logo abaixo. Os mantenedores aparecem como fotos no rodapé e em **Sobre**. Passe o mouse ou use o teclado para ver o nome e as contribuições de cada pessoa. Busca e páginas de categorias, recursos, áreas e tecnologias estão implementadas. A navegação reúne as categorias do guia, com expansão de um grupo por vez e destaque da rota atual. A navegação começa por Início, Comunidade e Criadores. Comunidade é um link direto para `/comunidades`, separado de Networking. Criadores é um link direto para `/criadores`, sem dropdown no computador ou no celular. Essa página mostra abas com ícones de YouTube, Instagram, TikTok, LinkedIn e Twitter/X. A aba inicial é YouTube, e `?plataforma=` permite compartilhar a rede selecionada. Não há uma aba de todos os criadores. As listagens usam fundo branco no tema claro, acompanham o tema escuro e não têm sombra. Sobre é um link direto, sem dropdown, e reúne também as empresas apoiadoras. O endereço antigo `/apoiadores` redireciona para `/sobre#apoiadores`. O endereço antigo `/contribuidores` redireciona para `/sobre#mantenedores`. Categorias sem cadastros mostram um estado vazio. Os cinco registros iniciais continuam fictícios.
+A página inicial apresenta o Guia, as métricas, os mantenedores e os apoiadores. O fórum fica em `/forum`. A navegação começa por Início, Fórum e Comunidades. Criadores continua em `/criadores`, e as demais categorias mantêm os grupos atuais. `/sobre` redireciona para `/`. Os endereços antigos `/apoiadores` e `/contribuidores` redirecionam para âncoras na página inicial.
 
 Todos os controles visuais usam componentes do registry oficial shadcn/ui: Button, Input, Card, Badge, DropdownMenu, Select, Separator e Empty. A composição das páginas usa Tailwind e tokens de tema laranja, sem os antigos componentes visuais manuais. Para atualizar componentes: `npx shadcn@latest add <nome> --overwrite`, dentro de `web/frontend`.
 
-Com o site rodando em `http://localhost:5081`, execute `npm --prefix web/frontend run test:ui` para verificar menus, teclado, busca, estados vazios, página Sobre, tema escuro, filtro de idioma e região e largura de tela no Chrome. Os testes de conversas usam respostas simuladas no navegador para verificar categorias, paginação, leitura, respostas, falha e nova tentativa, sem publicar no GitHub. Os testes .NET verificam o cliente GraphQL com um servidor HTTP simulado. Use `TEST_URL` e `CHROME_PATH` para outros endereços e instalações. `English (United States)` mostra apenas cadastros com idioma `en` e país `US` explicitamente marcado.
+Com o site rodando em `http://localhost:5081`, execute `npm --prefix web/frontend run test:ui` para verificar menus, teclado, busca, estados vazios, página inicial, tema escuro, filtro de idioma e região e largura de tela no Chrome. Os testes de conversas usam respostas simuladas no navegador para verificar categorias, paginação, leitura, respostas, falha e nova tentativa, sem publicar no GitHub. Os testes .NET verificam o cliente GraphQL com um servidor HTTP simulado. Use `TEST_URL` e `CHROME_PATH` para outros endereços e instalações. `English (United States)` mostra apenas cadastros com idioma `en` e país `US` explicitamente marcado.
 
 Mapa e filtros avançados permanecem no [plano](IMPLEMENTATION_PLAN.md). Veja a [arquitetura](ARCHITECTURE.md) e o [guia original](guia.md.txt).
 

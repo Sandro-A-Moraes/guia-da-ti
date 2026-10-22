@@ -4,7 +4,7 @@ export async function checkContributionWizard({ send, evaluate, waitFor, navigat
   await evaluate(`sessionStorage.setItem('participationMode','member')`);
 
 await navigate('/');
-await evaluate(`document.querySelector('[aria-label="Principal"] a[href="/sobre"]').focus()`);
+await evaluate(`document.querySelector('[aria-label="Principal"] a[href="/forum"]').focus()`);
 await evaluate(`window.dispatchEvent(new CustomEvent('guia:contribute', { detail: 'universities' }))`);
 await waitFor(`!!document.querySelector('[data-slot="dialog-content"]')`);
 
@@ -63,11 +63,11 @@ await waitFor(`!!document.querySelector('[data-slot="dialog-content"]')`);
 
   await click(`document.querySelector('[data-slot="dialog-close"]')`);
   await waitFor(`!document.querySelector('[data-slot="dialog-content"]')`);
-  await waitFor(`document.activeElement?.getAttribute('href') === '/sobre'`);
+  await waitFor(`document.activeElement?.getAttribute('href') === '/forum'`);
 
   assert.equal(
     await evaluate(`document.activeElement?.getAttribute('href')`),
-    '/sobre'
+    '/forum'
   );
 
   await evaluate(`sessionStorage.removeItem('participationMode')`);

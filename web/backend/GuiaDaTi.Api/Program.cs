@@ -44,6 +44,10 @@ app.UseForwardedHeaders();
 // Only sent on HTTPS requests. Production requires FORWARDED_PROXY_IP so the proxy protocol is trusted.
 if (!app.Environment.IsDevelopment()) app.UseHsts();
 app.Use(async (context, next) => {
+    if (context.Request.Path == "/" && int.TryParse(context.Request.Query["conversa"], out _)) {
+        context.Response.Redirect("/forum" + context.Request.QueryString, permanent: true);
+        return;
+    }
     if (context.Request.Path.Value?.TrimEnd('/') == "/contribuir") {
         context.Response.Redirect("/?sugerir=" + Uri.EscapeDataString(context.Request.Query["categoria"].ToString()));
         return;
@@ -72,9 +76,10 @@ app.MapRegisteredUsers();
 app.MapStudyEngagement();
 app.MapDiscussionResourceContext();
 app.MapAdvertising();
-app.MapGet("/apoiadores", () => Results.Redirect("/sobre#apoiadores", permanent: true));
-app.MapGet("/contribuidores", () => Results.Redirect("/sobre#mantenedores", permanent: true));
-app.MapGet("/mantenedores", () => Results.Redirect("/sobre#mantenedores", permanent: true));
+app.MapGet("/sobre", () => Results.Redirect("/", permanent: true));
+app.MapGet("/apoiadores", () => Results.Redirect("/#apoiadores", permanent: true));
+app.MapGet("/contribuidores", () => Results.Redirect("/#mantenedores", permanent: true));
+app.MapGet("/mantenedores", () => Results.Redirect("/#mantenedores", permanent: true));
 app.MapGet("/health", () => Results.Ok(new { status = "ok", resources = catalog.Resources.Length }));
 app.MapGet("/api/resources", (string? q, string? type, int? page, int? pageSize) => {
     if (q?.Length > 200 || page is < 1 || pageSize is < 1 or > 100) return Results.BadRequest(new { error = "Parâmetros inválidos." });

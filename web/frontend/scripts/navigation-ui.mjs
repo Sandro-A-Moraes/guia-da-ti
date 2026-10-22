@@ -11,7 +11,7 @@ export async function checkRouteFlash({send,evaluate,waitFor,navigate}) {
       await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:motion}]});
       for(const theme of ['light','dark']) {
         await evaluate('localStorage.setItem("theme",'+JSON.stringify(theme)+')');
-        for(const route of ['/comunidades/','/criadores/','/sobre/']) {
+        for(const route of ['/comunidades/','/criadores/','/forum/']) {
           await navigate(route);
           await waitFor('window.routeSamplingDone');
           const frames=await evaluate('window.routeFrames');
