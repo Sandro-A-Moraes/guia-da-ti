@@ -57,8 +57,8 @@ export function GuideLanding() {
       <header className="guide-home-hero">
         <div className="guide-home-copy">
           <p className="guide-home-eyebrow">RECURSOS PARA TECNOLOGIA</p>
-          <h1 className="guide-home-title"><span>Descubra seu próprio</span><span>caminho em tecnologia.</span></h1>
-          <p className="guide-home-description">Recursos, comunidades e um fórum para quem estuda ou trabalha com tecnologia.</p>
+          <h1 className="guide-home-title"><span>Tudo sobre tecnologia.</span><span>Em um só lugar.</span></h1>
+          <p className="guide-home-description">Uma curadoria de conteúdos, ferramentas e comunidades de tecnologia do Brasil e do mundo.</p>
           <div className="guide-home-actions">
             <Button asChild size="sm"><a href="#por-onde-comecar">Explorar recursos<ArrowUpRight /></a></Button>
             <Button asChild size="sm" variant="outline"><a href="/forum">Abrir fórum<ArrowUpRight /></a></Button>
