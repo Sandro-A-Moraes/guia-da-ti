@@ -52,7 +52,7 @@ jobs:
             const message = `A última execução agendada bem-sucedida começou há ${hours.toFixed(1)} horas.`;
             if (hours > 2) {
               core.warning(`${message} O intervalo esperado é de até duas horas.`);
-              await core.summary.addHeading('Atraso no build agendado').addText(message).write();
+              await core.summary.addHeading('Atraso no build agendado').addRaw(message).write();
             } else {
               core.notice(message);
             }
