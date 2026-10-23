@@ -288,12 +288,7 @@ header a[aria-current], footer a[aria-current] { background: var(--accent); colo
 .guide-contact-action { display: flex; flex-direction: column; align-items: center; gap: .75rem; flex: none; }
 @media (min-width: 768px) {
   .guide-character { display: block; }
-  .guide-character--peek { position: absolute; z-index: 1; left: 2.5rem; bottom: -10px; width: 120px; height: 89px; }
-  .guide-character--point { display: none; }
   .guide-character--contact { width: 125px; height: 83px; }
-}
-@media (min-width: 1500px) {
-  .guide-character--point { display: block; position: absolute; left: calc(100% - 14px); bottom: 24px; width: 95px; height: 127px; transform: skewX(1.6deg); transform-origin: 14px top; }
 }
 .guide-paths-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1px; border-block: 1px solid var(--guide-line); background: var(--guide-line); }
 .guide-path { display: flex; min-width: 0; flex-direction: column; padding: clamp(1.25rem, 3vw, 2rem); background: var(--guide-paths-background); transition: background-color .15s ease; }

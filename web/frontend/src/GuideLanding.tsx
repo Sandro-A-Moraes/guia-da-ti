@@ -69,7 +69,6 @@ export function GuideLanding() {
         </div>
       </header>
       <CommunityMetrics />
-      <GuideCharacter pose="point" className="guide-character--point" />
       <div className="section-divider section-divider--intro" aria-hidden="true" />
     </div>
 
@@ -80,7 +79,6 @@ export function GuideLanding() {
           <h2 id="por-onde-comecar" className="scroll-mt-28 text-2xl font-semibold tracking-tight sm:text-3xl">Por onde você quer começar?</h2>
         </div>
         <p className="text-sm leading-relaxed text-muted-foreground">Está começando na área ou procura algo para o trabalho? Escolha um caminho para seguir agora.</p>
-        <GuideCharacter pose="peek" className="guide-character--peek" />
       </div>
       <div className="guide-paths-grid">
         {paths.map(({ label, description, href, icon: Icon }) => <a key={href} href={href} className="guide-path">
