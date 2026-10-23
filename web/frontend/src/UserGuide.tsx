@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { HyperframesPlayer } from '@hyperframes/player';
 import { gsap } from 'gsap';
 import { ArrowUpRight, BookOpen, Briefcase, CalendarDays, CircleHelp, Code, Compass, Github, Lightbulb, MessageSquare, Megaphone, Newspaper, Pause, Play, Users, Video, HeartHandshake, X } from 'lucide-react';
@@ -184,7 +184,68 @@ export function SectionGuide({ section, dark, label }: { section: GuideStepId | 
 }
 
 export function AboutGuide({ dark }: { dark: boolean }) {
-  return <GuideTimeline dark={dark} steps={aboutGuideSteps} embedded />;
+  const [selected, setSelected] = useState(0);
+  const [reduced, setReduced] = useState(true);
+  const id = useId();
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const sync = () => setReduced(media.matches);
+    sync();
+    media.addEventListener('change', sync);
+    return () => media.removeEventListener('change', sync);
+  }, []);
+  const features = [
+    { title: 'Explore os recursos', description: 'Encontre cursos, conteúdos e oportunidades por categoria. Acesse cada indicação no site de origem.' },
+    { title: 'Converse no fórum', description: 'Tire dúvidas, compartilhe experiências e conheça quem também estuda ou trabalha com tecnologia.' },
+    { title: 'Ajude o catálogo', description: 'Indique um recurso ou sugira uma correção. Os mantenedores revisam as contribuições antes de publicar.' },
+    { title: 'Acompanhe o projeto', description: 'Consulte o catálogo e seu histórico no GitHub. Conheça quem mantém e apoia o Guia.' },
+  ];
+  const step = aboutGuideSteps[selected];
+
+  return <div className="guide-about-showcase">
+    <div role="tablist" aria-label="Conheça o projeto" aria-orientation="vertical" className="guide-about-tabs">
+      {aboutGuideSteps.map((item, index) => {
+        const Icon = stepIcons[item.id as keyof typeof stepIcons] ?? Compass;
+        return <button
+          key={item.id}
+          type="button"
+          role="tab"
+          id={`${id}-tab-${index}`}
+          aria-controls={`${id}-panel`}
+          aria-selected={selected === index}
+          tabIndex={selected === index ? 0 : -1}
+          className="guide-about-tab"
+          onClick={() => setSelected(index)}
+          onKeyDown={event => {
+            let next: number;
+            if (event.key === 'ArrowDown') next = (index + 1) % features.length;
+            else if (event.key === 'ArrowUp') next = (index - 1 + features.length) % features.length;
+            else if (event.key === 'Home') next = 0;
+            else if (event.key === 'End') next = features.length - 1;
+            else return;
+            event.preventDefault();
+            setSelected(next);
+            document.getElementById(`${id}-tab-${next}`)?.focus();
+          }}
+        >
+          <span className="guide-about-tab-icon" aria-hidden="true"><Icon size={27} strokeWidth={1.5} /></span>
+          <span className="guide-about-tab-copy">
+            <span className="guide-about-tab-title">{features[index].title}</span>
+            <span className="guide-about-tab-description">{features[index].description}</span>
+          </span>
+        </button>;
+      })}
+    </div>
+    <div role="tabpanel" id={`${id}-panel`} aria-labelledby={`${id}-tab-${selected}`} tabIndex={0} className="guide-about-preview">
+      <div className="guide-about-preview-inner">
+        <GuideAnimation key={step.id} id={step.id} phase={step.phase} dark={dark} reduced={reduced} />
+        <div className="guide-about-preview-footer">
+          <p className="text-xs leading-relaxed text-muted-foreground">{step.tip}</p>
+          <GuideStepLink step={step} />
+        </div>
+      </div>
+    </div>
+  </div>;
 }
 
 export function UserGuide({ dark: _dark }: { dark: boolean }) {

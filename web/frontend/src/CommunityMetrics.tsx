@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { categories, resources } from './catalog';
 import community from './generated/community.json';
 
@@ -42,6 +42,52 @@ export function ActiveUsers() {
   </span>;
 }
 
+function MetricValue({ value }: { value: number | null }) {
+  const element = useRef<HTMLSpanElement>(null);
+  const [displayed, setDisplayed] = useState(value);
+
+  useEffect(() => {
+    setDisplayed(value);
+    if (value === null || !element.current) return;
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (motion.matches) return;
+
+    let frame = 0;
+    const observer = new IntersectionObserver(entries => {
+      if (!entries.some(entry => entry.isIntersecting)) return;
+      observer.disconnect();
+      setDisplayed(0);
+      let start: number | undefined;
+      const tick = (time: number) => {
+        start ??= time;
+        const progress = Math.min((time - start) / 1100, 1);
+        setDisplayed(Math.round(value * (1 - (1 - progress) ** 3)));
+        if (progress < 1) frame = requestAnimationFrame(tick);
+      };
+      frame = requestAnimationFrame(tick);
+    }, { threshold: 0.5 });
+    observer.observe(element.current);
+
+    const stop = () => {
+      if (!motion.matches) return;
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+      setDisplayed(value);
+    };
+    motion.addEventListener('change', stop);
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+      motion.removeEventListener('change', stop);
+    };
+  }, [value]);
+
+  return <>
+    <span ref={element} aria-hidden="true">{displayed === null ? '—' : format(displayed)}</span>
+    <span className="sr-only">{value === null ? '—' : format(value)}</span>
+  </>;
+}
+
 export function CommunityMetrics() {
   const [forumMessages, setForumMessages] = useState<number | null>(null);
   useEffect(() => {
@@ -55,17 +101,17 @@ export function CommunityMetrics() {
     return () => controller.abort();
   }, []);
   const metrics = [
-    { value: format(resources.filter(resource => !resource.demo).length), label: 'Recursos' },
-    { value: format(categories.length), label: 'Categorias' },
-    { value: forumMessages === null ? '—' : format(forumMessages), label: 'Mensagens no fórum' },
-    { value: format(community.supporters.length), label: 'Apoiadores' },
+    { value: resources.filter(resource => !resource.demo).length, label: 'Recursos' },
+    { value: categories.length, label: 'Categorias' },
+    { value: forumMessages, label: 'Mensagens no fórum' },
+    { value: community.supporters.length, label: 'Apoiadores' },
   ];
   return <section aria-label="O Guia em números" className="guide-metrics">
     <h2 className="sr-only">O Guia em números</h2>
     <dl className="guide-metrics-grid">
       {metrics.map(metric => <div className="guide-metric" key={metric.label}>
         <dt>{metric.label}</dt>
-        <dd>{metric.value}</dd>
+        <dd><MetricValue value={metric.value} /></dd>
       </div>)}
     </dl>
   </section>;

@@ -80,7 +80,7 @@ export function Maintainers({ compact = false, embedded = false }: { compact?: b
   const shown = compact ? people?.slice(0, 8) : embedded ? people?.slice(0, homeLimit) : people;
   const remaining = embedded && people ? Math.max(0, people.length - homeLimit) : 0;
 
-  return <section id={compact ? undefined : 'contribuidores'} aria-label="Contribuidores" className={compact ? 'flex max-w-full items-center justify-center gap-2' : 'space-y-5'}>
+  return <section id={compact ? undefined : 'contribuidores'} aria-label="Contribuidores" className={compact ? 'flex max-w-full items-center justify-center gap-2' : embedded ? undefined : 'space-y-5'}>
     {compact ? <h2 className="sr-only">Contribuidores</h2> : !embedded && <header className="space-y-2"><h3 className="text-xl font-semibold tracking-tight">Contribuidores</h3><p className="text-sm text-muted-foreground">Pessoas que contribuem com os repositórios públicos do Guia.</p></header>}
     {error ? <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"><p>Não foi possível carregar os contribuidores.</p><Button variant="link" size="inline" onClick={retry}>Tentar novamente</Button></div>
       : people === null ? <div role="status" aria-label="Carregando contribuidores" className="flex flex-wrap gap-3">{Array.from({ length: compact ? 4 : 7 }, (_, index) => <Skeleton key={index} className={compact ? 'size-8 rounded-full' : 'size-11 rounded-full'} />)}</div>

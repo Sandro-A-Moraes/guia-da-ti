@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { ArrowUpRight, BookOpen, BriefcaseBusiness, Code, Mail, MessageSquare, Newspaper, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -5,7 +6,7 @@ import { AboutGuide } from './UserGuide';
 import { CommunityMetrics } from './CommunityMetrics';
 import { Maintainers } from './Maintainers';
 import { Community } from './Community';
-import heroImage from './assets/home/bh-hero.png';
+import heroImage from './assets/home/estudante-criativo.png';
 
 const paths = [
   { label: 'Quero estudar', description: 'Plataformas de cursos, livros e caminhos de estudo.', href: '/plataformas', icon: BookOpen },
@@ -26,7 +27,42 @@ const featuredResources = [
 ];
 
 export function GuideLanding({ dark }: { dark: boolean }) {
-  return <article className="guide-landing mx-auto w-full max-w-5xl">
+  const root = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (motion.matches || !root.current) return;
+    const animations: Animation[] = [];
+    const observer = new IntersectionObserver(entries => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        const element = entry.target as HTMLElement;
+        observer.unobserve(element);
+        const siblings = element.matches('.guide-path, .guide-metric')
+          ? Array.from(element.parentElement!.children).indexOf(element) : 0;
+        animations.push(element.animate([
+          { opacity: 0, transform: 'translateY(18px)' },
+          { opacity: 1, transform: 'translateY(0)' },
+        ], { duration: 1000, delay: siblings * 100, easing: 'cubic-bezier(.22, 1, .36, 1)', fill: 'backwards' }));
+      }
+    }, { threshold: 0.08, rootMargin: '0px 0px -24px 0px' });
+    root.current.querySelectorAll([
+      '.guide-home-copy', '.guide-home-visual', '.guide-metric',
+      '.guide-paths-heading', '.guide-path', '.guide-about-heading', '.guide-about-showcase',
+      '.guide-community-block > header', '.guide-community-block > section', '.guide-contact > div',
+    ].join(',')).forEach(element => observer.observe(element));
+    const stop = () => {
+      observer.disconnect();
+      animations.forEach(animation => animation.cancel());
+    };
+    const onMotionChange = () => { if (motion.matches) stop(); };
+    motion.addEventListener('change', onMotionChange);
+    return () => {
+      stop();
+      motion.removeEventListener('change', onMotionChange);
+    };
+  }, []);
+
+  return <article ref={root} className="guide-landing mx-auto w-full max-w-5xl">
     <div className="guide-home-intro">
       <header className="guide-home-hero">
         <div className="guide-home-copy">
@@ -44,7 +80,7 @@ export function GuideLanding({ dark }: { dark: boolean }) {
           </div>
         </div>
         <div className="guide-home-visual" aria-hidden="true">
-          <img src={heroImage} alt="" width={1702} height={1037} fetchPriority="high" />
+          <img src={heroImage} alt="" width={1448} height={1086} fetchPriority="high" />
         </div>
       </header>
       <CommunityMetrics />
@@ -70,17 +106,20 @@ export function GuideLanding({ dark }: { dark: boolean }) {
       <div className="section-divider section-divider--paths" aria-hidden="true" />
     </section>
 
-    <section id="conheca-o-guia" aria-labelledby="como-o-guia-funciona" className="scroll-mt-28 space-y-6">
-      <div className="max-w-2xl space-y-2">
-        <p className="text-xs font-medium uppercase tracking-widest text-primary">Conheça o projeto</p>
-        <h2 id="como-o-guia-funciona" className="text-2xl font-semibold tracking-tight sm:text-3xl">Links para descobrir. Um fórum para conversar.</h2>
+    <section id="conheca-o-guia" aria-labelledby="como-o-guia-funciona" className="guide-about scroll-mt-28">
+      <div className="guide-about-heading">
+        <div className="space-y-3">
+          <p className="inline-flex items-center gap-2 text-xs font-medium text-primary"><BookOpen className="size-7 rounded-md bg-primary/10 p-1.5" />Conheça o projeto</p>
+          <h2 id="como-o-guia-funciona" className="text-3xl font-medium tracking-tight sm:text-4xl">Links para descobrir.<br />Um fórum para conversar.</h2>
+        </div>
         <p className="text-sm leading-relaxed text-muted-foreground">Veja o que você encontra no Guia e como suas indicações ajudam outras pessoas.</p>
       </div>
       <AboutGuide dark={dark} />
+      <div className="section-divider section-divider--about" aria-hidden="true" />
     </section>
 
-    <section className="space-y-12">
-      <section aria-labelledby="contribuidores-heading" className="space-y-5">
+    <section className="guide-community-sections">
+      <section aria-labelledby="contribuidores-heading" className="guide-community-block space-y-5">
         <header className="max-w-2xl space-y-2">
           <p className="text-xs font-medium uppercase tracking-widest text-primary">A comunidade</p>
           <h2 id="contribuidores-heading" className="text-2xl font-semibold tracking-tight sm:text-3xl">Contribuidores</h2>
@@ -88,9 +127,9 @@ export function GuideLanding({ dark }: { dark: boolean }) {
         </header>
         <Maintainers embedded />
       </section>
-      <section aria-labelledby="apoiadores-heading" className="space-y-5">
+      <section aria-labelledby="apoiadores-heading" className="guide-community-block space-y-5">
         <header className="max-w-2xl space-y-2">
-          <p className="text-xs font-medium uppercase tracking-widest text-primary">A comunidade</p>
+          <p className="text-xs font-medium uppercase tracking-widest text-primary">Apoio ao projeto</p>
           <h2 id="apoiadores-heading" className="text-2xl font-semibold tracking-tight sm:text-3xl">Empresas apoiadoras</h2>
           <p className="text-sm leading-relaxed text-muted-foreground">Empresas que ajudam a manter o Guia da TI.</p>
         </header>
@@ -98,7 +137,7 @@ export function GuideLanding({ dark }: { dark: boolean }) {
       </section>
     </section>
 
-    <section id="contato" aria-labelledby="fale-com-o-guia" className="scroll-mt-28 rounded-3xl border bg-card p-6 sm:p-8">
+    <section id="contato" aria-labelledby="fale-com-o-guia" className="guide-contact scroll-mt-28">
       <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="max-w-2xl space-y-2">
           <h2 id="fale-com-o-guia" className="text-2xl font-semibold tracking-tight">Fale com a gente</h2>
