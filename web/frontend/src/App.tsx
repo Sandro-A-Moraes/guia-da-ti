@@ -246,7 +246,7 @@ export function App({ path }: { path: string }) {
   }
 
   return (
-    <Motion><ContributionToasts><Participation><ContributionDialog /><CommunityMetricsProvider><MaintainersProvider><div className="flex min-h-dvh flex-col">
+    <Motion><ContributionToasts><Participation><ContributionDialog /><CommunityMetricsProvider><MaintainersProvider><div className="flex min-h-dvh flex-col overflow-x-clip">
       <Button asChild className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50">
         <a href="#conteudo">Pular para o conteúdo</a>
       </Button>
