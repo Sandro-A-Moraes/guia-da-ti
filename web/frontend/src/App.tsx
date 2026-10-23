@@ -1,5 +1,5 @@
 import {ContributionDialog} from './ContributionDialog';
-import { SectionGuide, UserGuide } from './UserGuide';
+import { SectionGuide } from './UserGuide';
 import { GuideLanding } from './GuideLanding';
 import { guideSectionForGroup } from './guide-steps';
 import {openContribution} from './contribution-actions';
@@ -327,13 +327,12 @@ export function App({ path }: { path: string }) {
         </div>
       </header>
 
-      <UserGuide dark={dark} />
 
       <main data-motion id="conteudo" className="site-frame mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 py-8 sm:px-6 sm:py-10">
         {!page.valid ? (
           <Empty><EmptyHeader><EmptyTitle>Página não encontrada</EmptyTitle><EmptyDescription>Não encontramos esta página no Guia.</EmptyDescription></EmptyHeader><EmptyContent><Button asChild><a href="/">Voltar ao início</a></Button></EmptyContent></Empty>
         ) : home ? (
-          <GuideLanding dark={dark} />
+          <GuideLanding />
         ) : forumPage ? (
           <Discussions className="w-full flex-1" />
         ) : path === '/admin/anuncios' ? (

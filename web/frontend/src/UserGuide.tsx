@@ -1,7 +1,7 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { HyperframesPlayer } from '@hyperframes/player';
 import { gsap } from 'gsap';
-import { ArrowUpRight, BookOpen, Briefcase, CalendarDays, CircleHelp, Code, Compass, Github, Lightbulb, MessageSquare, Megaphone, Newspaper, Pause, Play, Users, Video, HeartHandshake, X } from 'lucide-react';
+import { ArrowUpRight, BookOpen, Briefcase, CalendarDays, CircleHelp, Code, Compass, Github, Lightbulb, MessageSquare, Megaphone, Newspaper, Pause, Play, Users, Video, HeartHandshake } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { aboutGuideSteps, githubGuideSteps, guideAnimationSection, guideSteps, sectionWalkthrough, type GuideStep, type GuideStepId } from './guide-steps';
@@ -181,102 +181,4 @@ export function SectionGuide({ section, dark, label }: { section: GuideStepId | 
     <GuideAttention target={trigger} enabled={!label} />
     <GuideDialogContent dark={dark ?? localDark} steps={steps} title={title} description={description} />
   </Dialog>;
-}
-
-export function AboutGuide({ dark }: { dark: boolean }) {
-  const [selected, setSelected] = useState(0);
-  const [reduced, setReduced] = useState(true);
-  const id = useId();
-  useEffect(() => {
-    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const sync = () => setReduced(media.matches);
-    sync();
-    media.addEventListener('change', sync);
-    return () => media.removeEventListener('change', sync);
-  }, []);
-  const features = [
-    { title: 'Explore os recursos', description: 'Encontre cursos, conteúdos e oportunidades por categoria. Acesse cada indicação no site de origem.' },
-    { title: 'Converse no fórum', description: 'Tire dúvidas, compartilhe experiências e conheça quem também estuda ou trabalha com tecnologia.' },
-    { title: 'Ajude o catálogo', description: 'Indique um recurso ou sugira uma correção. Os mantenedores revisam as contribuições antes de publicar.' },
-    { title: 'Acompanhe o projeto', description: 'Consulte o catálogo e seu histórico no GitHub. Conheça quem mantém e apoia o Guia.' },
-  ];
-  const step = aboutGuideSteps[selected];
-
-  return <div className="guide-about-showcase">
-    <div role="tablist" aria-label="Conheça o projeto" aria-orientation="vertical" className="guide-about-tabs">
-      {aboutGuideSteps.map((item, index) => {
-        const Icon = stepIcons[item.id as keyof typeof stepIcons] ?? Compass;
-        return <button
-          key={item.id}
-          type="button"
-          role="tab"
-          id={`${id}-tab-${index}`}
-          aria-controls={`${id}-panel`}
-          aria-selected={selected === index}
-          tabIndex={selected === index ? 0 : -1}
-          className="guide-about-tab"
-          onClick={() => setSelected(index)}
-          onKeyDown={event => {
-            let next: number;
-            if (event.key === 'ArrowDown') next = (index + 1) % features.length;
-            else if (event.key === 'ArrowUp') next = (index - 1 + features.length) % features.length;
-            else if (event.key === 'Home') next = 0;
-            else if (event.key === 'End') next = features.length - 1;
-            else return;
-            event.preventDefault();
-            setSelected(next);
-            document.getElementById(`${id}-tab-${next}`)?.focus();
-          }}
-        >
-          <span className="guide-about-tab-icon" aria-hidden="true"><Icon size={27} strokeWidth={1.5} /></span>
-          <span className="guide-about-tab-copy">
-            <span className="guide-about-tab-title">{features[index].title}</span>
-            <span className="guide-about-tab-description">{features[index].description}</span>
-          </span>
-        </button>;
-      })}
-    </div>
-    <div role="tabpanel" id={`${id}-panel`} aria-labelledby={`${id}-tab-${selected}`} tabIndex={0} className="guide-about-preview">
-      <div className="guide-about-preview-inner">
-        <GuideAnimation key={step.id} id={step.id} phase={step.phase} dark={dark} reduced={reduced} />
-        <div className="guide-about-preview-footer">
-          <p className="text-xs leading-relaxed text-muted-foreground">{step.tip}</p>
-          <GuideStepLink step={step} />
-        </div>
-      </div>
-    </div>
-  </div>;
-}
-
-export function UserGuide({ dark: _dark }: { dark: boolean }) {
-  const [dismissed, setDismissed] = useState(false);
-  useEffect(() => {
-    const storageKey = 'guia:usage-tip:v1';
-    function sync(value: string | null) {
-      const hidden = value === 'dismissed';
-      setDismissed(hidden);
-      document.documentElement.toggleAttribute('data-guide-dismissed', hidden);
-    }
-    try { sync(localStorage.getItem(storageKey)); } catch { /* The banner remains available without storage. */ }
-    function changed(event: StorageEvent) {
-      if (event.key === storageKey || event.key === null) sync(event.newValue);
-    }
-    window.addEventListener('storage', changed);
-    return () => window.removeEventListener('storage', changed);
-  }, []);
-  function dismiss() {
-    setDismissed(true);
-    document.documentElement.setAttribute('data-guide-dismissed', '');
-    try { localStorage.setItem('guia:usage-tip:v1', 'dismissed'); } catch { /* Closing still works for this page. */ }
-  }
-  if (dismissed) return null;
-  return <aside aria-label="Dicas para usar o Guia" className="guide-announcement relative shrink-0 border-y border-primary/15 bg-accent/60">
-      <div className="site-frame mx-auto grid max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 px-4 py-3 sm:flex sm:flex-nowrap sm:px-6">
-        <CircleHelp aria-hidden="true" className="size-5 shrink-0 text-primary" />
-        <p className="min-w-0 text-sm sm:flex-1"><span className="font-medium">Novo por aqui?</span>{' '}<span className="text-muted-foreground">Veja as dicas para usar o Guia.</span><span aria-hidden="true" className="ml-2 inline-flex items-center gap-1 whitespace-nowrap text-primary underline underline-offset-4 sm:hidden">Como usar o Guia<ArrowUpRight className="size-4" /></span></p>
-        <a href="/#conheca-o-guia" aria-label="Abrir dicas para usar o Guia" className="absolute inset-0 z-[1] sm:hidden" />
-        <Button asChild variant="outline" className="hidden sm:order-none sm:ml-auto sm:inline-flex"><a href="/#conheca-o-guia">Como usar o Guia<ArrowUpRight /></a></Button>
-        <Button variant="ghost" size="icon" className="relative z-10 col-start-3 row-start-1 shrink-0 sm:order-3 sm:ml-0" aria-label="Fechar barra de dicas" title="Não mostrar novamente neste navegador" onClick={dismiss}><X /></Button>
-      </div>
-    </aside>;
 }

@@ -1,12 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { ArrowUpRight, BookOpen, BriefcaseBusiness, Code, Mail, MessageSquare, Newspaper, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { AboutGuide } from './UserGuide';
 import { CommunityMetrics } from './CommunityMetrics';
 import { Maintainers } from './Maintainers';
 import { Community } from './Community';
-import heroImage from './assets/home/estudante-criativo.png';
+import { GuideCharacter } from './GuideCharacter';
+import heroImage from './assets/home/avatar-barbudo-dark.png';
 
 const paths = [
   { label: 'Quero estudar', description: 'Plataformas de cursos, livros e caminhos de estudo.', href: '/plataformas', icon: BookOpen },
@@ -17,16 +16,7 @@ const paths = [
   { label: 'Quero trocar uma ideia', description: 'Pergunte e compartilhe experiências no fórum do Guia.', href: '/forum', icon: MessageSquare },
 ];
 
-const featuredResources = [
-  { label: 'Plataformas de cursos', href: '/plataformas' },
-  { label: 'Notícias', href: '/noticias' },
-  { label: 'Comunidades', href: '/comunidades' },
-  { label: 'Ferramentas', href: '/ferramentas' },
-  { label: 'Vagas', href: '/vagas' },
-  { label: 'Fórum', href: '/forum' },
-];
-
-export function GuideLanding({ dark }: { dark: boolean }) {
+export function GuideLanding() {
   const root = useRef<HTMLElement>(null);
   useEffect(() => {
     const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -47,7 +37,7 @@ export function GuideLanding({ dark }: { dark: boolean }) {
     }, { threshold: 0.08, rootMargin: '0px 0px -24px 0px' });
     root.current.querySelectorAll([
       '.guide-home-copy', '.guide-home-visual', '.guide-metric',
-      '.guide-paths-heading', '.guide-path', '.guide-about-heading', '.guide-about-showcase',
+      '.guide-paths-heading', '.guide-path',
       '.guide-community-block > header', '.guide-community-block > section', '.guide-contact > div',
     ].join(',')).forEach(element => observer.observe(element));
     const stop = () => {
@@ -67,23 +57,19 @@ export function GuideLanding({ dark }: { dark: boolean }) {
       <header className="guide-home-hero">
         <div className="guide-home-copy">
           <p className="guide-home-eyebrow">RECURSOS PARA TECNOLOGIA</p>
-          <h1 className="guide-home-title"><span>Descubra seu próximo</span> <span>caminho em tecnologia.</span></h1>
+          <h1 className="guide-home-title"><span>Descubra seu próprio</span><span>caminho em tecnologia.</span></h1>
           <p className="guide-home-description">Recursos, comunidades e um fórum para quem estuda ou trabalha com tecnologia.</p>
-          <nav aria-label="Recursos do Guia" className="guide-home-badges flex flex-wrap gap-2 pt-5">
-            {featuredResources.map(resource => <Badge asChild key={resource.href} variant="outline" className="rounded-full px-3 py-1 hover:bg-accent">
-              <a href={resource.href}>{resource.label}</a>
-            </Badge>)}
-          </nav>
           <div className="guide-home-actions">
             <Button asChild size="sm"><a href="#por-onde-comecar">Explorar recursos<ArrowUpRight /></a></Button>
             <Button asChild size="sm" variant="outline"><a href="/forum">Abrir fórum<ArrowUpRight /></a></Button>
           </div>
         </div>
         <div className="guide-home-visual" aria-hidden="true">
-          <img src={heroImage} alt="" width={1448} height={1086} fetchPriority="high" />
+          <img src={heroImage} alt="" width={1188} height={1324} fetchPriority="high" />
         </div>
       </header>
       <CommunityMetrics />
+      <GuideCharacter pose="point" className="guide-character--point" />
       <div className="section-divider section-divider--intro" aria-hidden="true" />
     </div>
 
@@ -94,6 +80,7 @@ export function GuideLanding({ dark }: { dark: boolean }) {
           <h2 id="por-onde-comecar" className="scroll-mt-28 text-2xl font-semibold tracking-tight sm:text-3xl">Por onde você quer começar?</h2>
         </div>
         <p className="text-sm leading-relaxed text-muted-foreground">Está começando na área ou procura algo para o trabalho? Escolha um caminho para seguir agora.</p>
+        <GuideCharacter pose="peek" className="guide-character--peek" />
       </div>
       <div className="guide-paths-grid">
         {paths.map(({ label, description, href, icon: Icon }) => <a key={href} href={href} className="guide-path">
@@ -104,18 +91,6 @@ export function GuideLanding({ dark }: { dark: boolean }) {
         </a>)}
       </div>
       <div className="section-divider section-divider--paths" aria-hidden="true" />
-    </section>
-
-    <section id="conheca-o-guia" aria-labelledby="como-o-guia-funciona" className="guide-about scroll-mt-28">
-      <div className="guide-about-heading">
-        <div className="space-y-3">
-          <p className="inline-flex items-center gap-2 text-xs font-medium text-primary"><BookOpen className="size-7 rounded-md bg-primary/10 p-1.5" />Conheça o projeto</p>
-          <h2 id="como-o-guia-funciona" className="text-3xl font-medium tracking-tight sm:text-4xl">Links para descobrir.<br />Um fórum para conversar.</h2>
-        </div>
-        <p className="text-sm leading-relaxed text-muted-foreground">Veja o que você encontra no Guia e como suas indicações ajudam outras pessoas.</p>
-      </div>
-      <AboutGuide dark={dark} />
-      <div className="section-divider section-divider--about" aria-hidden="true" />
     </section>
 
     <section className="guide-community-sections">
@@ -144,7 +119,10 @@ export function GuideLanding({ dark }: { dark: boolean }) {
           <p className="text-sm leading-relaxed text-muted-foreground">Peça a remoção de um conteúdo, relate um bug ou converse sobre uma parceria.</p>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 pt-1"><a href="mailto:devlucaspedro@gmail.com" className="text-sm font-medium text-foreground underline underline-offset-4 transition-colors hover:text-primary">E-mail: devlucaspedro@gmail.com</a></div>
         </div>
-        <Button asChild className="shrink-0"><a href="mailto:devlucaspedro@gmail.com"><Mail />Enviar e-mail</a></Button>
+        <div className="guide-contact-action">
+          <GuideCharacter pose="contact" className="guide-character--contact" />
+          <Button asChild className="shrink-0"><a href="mailto:devlucaspedro@gmail.com"><Mail />Enviar e-mail</a></Button>
+        </div>
       </div>
     </section>
 
