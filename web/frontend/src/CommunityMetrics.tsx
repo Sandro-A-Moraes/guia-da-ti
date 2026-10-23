@@ -1,3 +1,4 @@
+import { FORUM_ENABLED } from './features';
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { categories, resources } from './catalog';
 import community from './generated/community.json';
@@ -91,6 +92,7 @@ function MetricValue({ value }: { value: number | null }) {
 export function CommunityMetrics() {
   const [forumMessages, setForumMessages] = useState<number | null>(null);
   useEffect(() => {
+    if (!FORUM_ENABLED) return;
     const controller = new AbortController();
     fetch('/api/discussions/metrics', { signal: controller.signal, cache: 'no-store' })
       .then(async response => response.ok ? response.json() : null)
@@ -103,12 +105,12 @@ export function CommunityMetrics() {
   const metrics = [
     { value: resources.filter(resource => !resource.demo).length, label: 'Recursos' },
     { value: categories.length, label: 'Categorias' },
-    { value: forumMessages, label: 'Mensagens no fórum' },
+    ...(FORUM_ENABLED ? [{ value: forumMessages, label: 'Mensagens no fórum' }] : []),
     { value: community.supporters.length, label: 'Apoiadores' },
   ];
   return <section aria-label="O Guia em números" className="guide-metrics">
     <h2 className="sr-only">O Guia em números</h2>
-    <dl className="guide-metrics-grid">
+    <dl className="guide-metrics-grid" data-count={metrics.length}>
       {metrics.map(metric => <div className="guide-metric" key={metric.label}>
         <dt>{metric.label}</dt>
         <dd><MetricValue value={metric.value} /></dd>

@@ -1,3 +1,4 @@
+import { FORUM_ENABLED } from './features';
 import {ContributionDialog} from './ContributionDialog';
 import { SectionGuide } from './UserGuide';
 import { GuideLanding } from './GuideLanding';
@@ -146,7 +147,7 @@ function ResourceRow({ resource, platform, locationColumn = false, sponsored = f
 export function App({ path }: { path: string }) {
   const page = pageInfo(path);
   const home = path === '/';
-  const forumPage = path === '/forum';
+  const forumPage = FORUM_ENABLED && path === '/forum';
   const creatorsPage = path === '/criadores';
   const communitiesPage = path === '/comunidades';
   const communitiesActive = communitiesPage || page.category?.id === 'communities';
@@ -258,7 +259,7 @@ export function App({ path }: { path: string }) {
           <NavigationMenu viewport={false} aria-label="Principal" className="!static pointer-events-auto min-w-0 flex">
             <NavigationMenuList className="flex-nowrap gap-0.5">
               <NavigationMenuItem><NavigationMenuLink asChild active={home}><a href="/" aria-current={home ? 'page' : undefined}>Início</a></NavigationMenuLink></NavigationMenuItem>
-              <NavigationMenuItem><NavigationMenuLink asChild active={forumPage}><a href="/forum" aria-current={forumPage ? 'page' : undefined}>Fórum</a></NavigationMenuLink></NavigationMenuItem>
+              {FORUM_ENABLED && <NavigationMenuItem><NavigationMenuLink asChild active={forumPage}><a href="/forum" aria-current={forumPage ? 'page' : undefined}>Fórum</a></NavigationMenuLink></NavigationMenuItem>}
               <NavigationMenuItem><NavigationMenuLink asChild active={communitiesActive}><a href="/comunidades" aria-current={communitiesActive ? 'page' : undefined}>Comunidades</a></NavigationMenuLink></NavigationMenuItem>
               {groups.filter(group => group.id !== 'communities').map(group => ['creators'].includes(group.id) ? (
                 <NavigationMenuItem key={group.id}><NavigationMenuLink asChild active={page.category?.id === group.id}><a href={'/' + group.categories[0].route} aria-current={page.category?.id === group.id ? 'page' : undefined}>{group.name}</a></NavigationMenuLink></NavigationMenuItem>
@@ -296,7 +297,7 @@ export function App({ path }: { path: string }) {
                 <nav aria-label="Navegação para celular" className="flex flex-1 flex-col overflow-y-auto px-4 py-4">
                   <div className="overflow-hidden border divide-y">
                     <SheetClose asChild><Button asChild size="menu" variant={home ? 'secondary' : 'ghost'} className="min-h-11 rounded-none"><a href="/" aria-current={home ? 'page' : undefined}>Início</a></Button></SheetClose>
-                    <SheetClose asChild><Button asChild size="menu" variant={forumPage ? 'secondary' : 'ghost'} className="min-h-11 rounded-none"><a href="/forum" aria-current={forumPage ? 'page' : undefined}>Fórum</a></Button></SheetClose>
+                    {FORUM_ENABLED && <SheetClose asChild><Button asChild size="menu" variant={forumPage ? 'secondary' : 'ghost'} className="min-h-11 rounded-none"><a href="/forum" aria-current={forumPage ? 'page' : undefined}>Fórum</a></Button></SheetClose>}
                     <SheetClose asChild><Button asChild size="menu" variant={communitiesActive ? 'secondary' : 'ghost'} className="min-h-11 rounded-none"><a href="/comunidades" aria-current={communitiesActive ? 'page' : undefined}>Comunidades</a></Button></SheetClose>
                     <Accordion.Root type="single" collapsible className="divide-y" defaultValue={groups.find(group => group.categories.some(category => category.id === page.category?.id))?.id}>
                     {groups.filter(group => group.id !== 'communities').map(group => ['creators'].includes(group.id) ? (

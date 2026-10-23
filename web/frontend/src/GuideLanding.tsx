@@ -1,3 +1,4 @@
+import { FORUM_ENABLED } from './features';
 import { useEffect, useRef } from 'react';
 import { ArrowUpRight, BookOpen, BriefcaseBusiness, Code, Mail, MessageSquare, Newspaper, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -61,7 +62,7 @@ export function GuideLanding() {
           <p className="guide-home-description">Uma curadoria de conteúdos, ferramentas e comunidades de tecnologia do Brasil e do mundo.</p>
           <div className="guide-home-actions">
             <Button asChild size="sm"><a href="#por-onde-comecar">Explorar recursos<ArrowUpRight /></a></Button>
-            <Button asChild size="sm" variant="outline"><a href="/forum">Abrir fórum<ArrowUpRight /></a></Button>
+            {FORUM_ENABLED && <Button asChild size="sm" variant="outline"><a href="/forum">Abrir fórum<ArrowUpRight /></a></Button>}
           </div>
         </div>
         <div className="guide-home-visual" aria-hidden="true">
@@ -81,7 +82,7 @@ export function GuideLanding() {
         <p className="text-sm leading-relaxed text-muted-foreground">Está começando na área ou procura algo para o trabalho? Escolha um caminho para seguir agora.</p>
       </div>
       <div className="guide-paths-grid">
-        {paths.map(({ label, description, href, icon: Icon }) => <a key={href} href={href} className="guide-path">
+        {paths.filter(path => FORUM_ENABLED || path.href !== '/forum').map(({ label, description, href, icon: Icon }) => <a key={href} href={href} className="guide-path">
           <div className="guide-path-meta" aria-hidden="true"><ArrowUpRight className="size-4" /></div>
           <div className="guide-path-icon" aria-hidden="true"><Icon className="size-7" strokeWidth={1.25} /></div>
           <h3 className="mb-2 text-lg font-medium tracking-tight">{label}</h3>

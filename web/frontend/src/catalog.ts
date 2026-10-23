@@ -1,3 +1,4 @@
+import { FORUM_ENABLED } from './features';
 import snapshot from './generated/catalog.json';
 import navigation from './navigation.json';
 import type { CommunityLocation } from './community-location';
@@ -19,10 +20,10 @@ export function pageInfo(path: string) {
   const resource = parts.length === 2 && category ? resources.find(r => r.type === category.id && r.slug === parts[1]) : undefined;
   const area = parts.length === 2 && parts[0] === 'areas' && taxonomy.areas.includes(parts[1]) ? parts[1] : undefined;
   const technology = parts.length === 2 && parts[0] === 'tecnologias' && taxonomy.technologies.includes(parts[1]) ? parts[1] : undefined;
-  const valid = ['/', '/forum', '/divulgue', '/empresas', '/admin/anuncios'].includes(path) || (parts.length === 1 && listingCategories.some(item => item === category)) || !!resource || !!area || !!technology;
+  const valid = ['/', ...(FORUM_ENABLED ? ['/forum'] : []), '/divulgue', '/empresas', '/admin/anuncios'].includes(path) || (parts.length === 1 && listingCategories.some(item => item === category)) || !!resource || !!area || !!technology;
   const title = !valid ? 'Página não encontrada' : resource?.name ?? (area ? labels[area] : technology ? labels[technology] : undefined) ?? category?.name ?? (path === '/' ? 'Início' : path === '/forum' ? 'Fórum da comunidade' : path === '/divulgue' || path === '/empresas' ? 'Divulgue no Guia da TI' : 'Explore tecnologia');
   if (path === '/divulgue' || path === '/empresas') return { category, resource, area, technology, valid, title, description: 'Conheça as opções para divulgar projetos, conteúdos e soluções no Guia da TI.' };
   if (path === '/admin/anuncios') return { category, resource, area, technology, valid, title: 'Administração de anúncios', description: 'Painel restrito para administrar as campanhas do Guia da TI.' };
   return { category, resource, area, technology, valid, title, description: resource ? `Indicação de ${resource.name}. ${resource.summary} Acesse o conteúdo no site de origem.` : (path === '/' ? 'Encontre links de tecnologia, comunidades e oportunidades para escolher seu próximo passo.' : path === '/forum' ? 'Tire dúvidas e compartilhe experiências sobre tecnologia no fórum do Guia da TI.' : 'Encontre links para cursos, artigos, ferramentas, comunidades e oportunidades de tecnologia em outros sites.') };
 }
-export const routes = ['/', '/forum', '/divulgue', ...listingCategories.map(c => `/${c.route}`), ...resources.map(resourcePath), ...taxonomy.areas.map(a => `/areas/${a}`), ...taxonomy.technologies.map(t => `/tecnologias/${t}`)];
+export const routes = ['/', ...(FORUM_ENABLED ? ['/forum'] : []), '/divulgue', ...listingCategories.map(c => `/${c.route}`), ...resources.map(resourcePath), ...taxonomy.areas.map(a => `/areas/${a}`), ...taxonomy.technologies.map(t => `/tecnologias/${t}`)];
