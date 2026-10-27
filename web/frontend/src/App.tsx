@@ -360,7 +360,7 @@ export function App({ path }: { path: string }) {
             <RoadmapContributors slug={page.resource.slug} />
             <aside aria-label="Informações do roadmap" className="flex flex-col gap-3 rounded-lg bg-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
             <dl className="grid grid-cols-2 gap-3 text-sm sm:min-w-56"><div className="space-y-1"><dt className="text-xs text-muted-foreground">Idiomas</dt><dd>{page.resource.languages.join(', ') || 'Não informado'}</dd></div><div className="space-y-1"><dt className="text-xs text-muted-foreground">Última atualização</dt><dd>{page.resource.updatedAt.split('-').reverse().join('/')}</dd></div></dl>
-            {repository && <Button asChild variant="outline"><a href={`${repository}/commits/main/data/roadmaps/${page.resource.slug}.json`} target="_blank" rel="noopener noreferrer">Ver histórico<ArrowUpRight /></a></Button>}
+            <div className="flex flex-wrap gap-2"><Button type="button" onClick={() => openContribution('roadmaps', { roadmap: page.resource!.slug })}>Sugerir alteração</Button>{repository && <Button asChild variant="outline"><a href={`${repository}/commits/main/data/roadmaps/${page.resource.slug}.json`} target="_blank" rel="noopener noreferrer">Ver histórico<ArrowUpRight /></a></Button>}</div>
             </aside>
             </> : (
             <aside aria-label="Informações e links do recurso" className="flex flex-col gap-4 rounded-lg bg-muted/30 p-4 lg:flex-row lg:items-center lg:justify-between">

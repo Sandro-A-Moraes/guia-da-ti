@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useId, useMemo, useState } from 'react';
 import { ArrowUpRight, ChevronDown, CircleDashed, Clock, Star, ThumbsUp, type LucideIcon } from 'lucide-react';
 import { categories, resourcePath, resources, type Resource } from './catalog';
 import { cachedRoadmap, loadRoadmap, type Roadmap, type RoadmapImportance, type RoadmapStep, type RoadmapSubstep } from './roadmap-data';
@@ -13,6 +13,10 @@ const importance: Record<RoadmapImportance, { label: string; hint: string; icon:
   recommended: { label: 'Recomendado', hint: 'Vale o tempo para quase todo mundo.', icon: ThumbsUp, className: 'border-transparent bg-secondary text-secondary-foreground' },
   optional: { label: 'Opcional', hint: 'Estude se o assunto te interessar.', icon: CircleDashed, className: 'border-dashed border-border text-muted-foreground' },
 };
+
+// A draft preview sits on a page that may already show the published roadmap, so it drops the #etapa anchors.
+const AnchorsContext = createContext(true);
+const useAnchor = () => { const anchors = useContext(AnchorsContext); return (id: string) => (anchors ? `etapa-${id}` : undefined); };
 
 const resourceIndex = new Map(resources.map(resource => [`${resource.type}/${resource.slug}`, resource]));
 
@@ -40,8 +44,9 @@ function Materials({ node }: { node: RoadmapSubstep }) {
 }
 
 function Substeps({ items }: { items: RoadmapSubstep[] }) {
+  const anchor = useAnchor();
   return <ol aria-label="Subetapas" className="space-y-3 border-l pl-4">
-    {items.map(item => <li key={item.id} id={`etapa-${item.id}`} className="scroll-mt-24 space-y-2">
+    {items.map(item => <li key={item.id} id={anchor(item.id)} className="scroll-mt-24 space-y-2">
       <div className="flex flex-wrap items-center gap-2"><p className="min-w-0 break-words font-medium">{item.title}</p><ImportanceBadge value={item.importance} /></div>
       {item.description && <p className="break-words text-muted-foreground">{item.description}</p>}
       <Materials node={item} />
@@ -50,9 +55,10 @@ function Substeps({ items }: { items: RoadmapSubstep[] }) {
 }
 
 function Step({ step, open, onOpenChange }: { step: RoadmapStep; open: boolean; onOpenChange: (open: boolean) => void }) {
+  const anchor = useAnchor();
   const title = <span className="min-w-0 flex-1 break-words font-medium">{step.title}</span>;
-  if (!hasDetails(step)) return <li id={`etapa-${step.id}`} className="scroll-mt-24 flex flex-wrap items-center gap-2 rounded-lg border bg-card px-3 py-3"><span className="size-4 shrink-0" aria-hidden="true" />{title}<ImportanceBadge value={step.importance} /></li>;
-  return <li id={`etapa-${step.id}`} className="scroll-mt-24 rounded-lg border bg-card">
+  if (!hasDetails(step)) return <li id={anchor(step.id)} className="scroll-mt-24 flex flex-wrap items-center gap-2 rounded-lg border bg-card px-3 py-3"><span className="size-4 shrink-0" aria-hidden="true" />{title}<ImportanceBadge value={step.importance} /></li>;
+  return <li id={anchor(step.id)} className="scroll-mt-24 rounded-lg border bg-card">
     <Collapsible open={open} onOpenChange={onOpenChange}>
       <CollapsibleTrigger className="group flex w-full items-start gap-3 rounded-lg px-3 py-3 text-left focus-visible:outline-2 focus-visible:outline-ring">
         <ChevronDown aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180 motion-reduce:transition-none" />
@@ -68,7 +74,8 @@ function Step({ step, open, onOpenChange }: { step: RoadmapStep; open: boolean; 
   </li>;
 }
 
-function RoadmapTree({ roadmap, resource }: { roadmap: Roadmap; resource: Resource }) {
+function RoadmapTree({ roadmap, resource, anchors = true }: { roadmap: Roadmap; resource: Resource; anchors?: boolean }) {
+  const uid = useId();
   const expandable = useMemo(() => roadmap.sections.flatMap(section => section.steps.filter(hasDetails).map(step => step.id)), [roadmap]);
   const [open, setOpen] = useState<Set<string>>(new Set());
   const [stale, setStale] = useState(false);
@@ -80,6 +87,7 @@ function RoadmapTree({ roadmap, resource }: { roadmap: Roadmap; resource: Resour
   }), []);
   // Opens the steps that hide the target of a #etapa-<id> link, then scrolls to it.
   useEffect(() => {
+    if (!anchors) return;
     const reveal = () => {
       const match = /^#etapa-([a-z0-9-]+)$/.exec(window.location.hash);
       const ancestors = match && stepAncestors(roadmap.sections, match[1]);
@@ -91,10 +99,10 @@ function RoadmapTree({ roadmap, resource }: { roadmap: Roadmap; resource: Resour
     reveal();
     window.addEventListener('hashchange', reveal);
     return () => window.removeEventListener('hashchange', reveal);
-  }, [roadmap]);
+  }, [roadmap, anchors]);
   const allOpen = expandable.length > 0 && expandable.every(id => open.has(id));
   const summary = resource.roadmap;
-  return <div className="space-y-6">
+  return <AnchorsContext.Provider value={anchors}><div className="space-y-6">
     {stale && <Alert role="status"><Clock aria-hidden="true" /><AlertTitle>Este roadmap pode estar desatualizado</AlertTitle><AlertDescription>A última revisão foi em {resource.updatedAt.split('-').reverse().join('/')}. Confira os materiais antes de seguir.</AlertDescription></Alert>}
     <div className="space-y-4 rounded-lg bg-muted/30 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -106,8 +114,8 @@ function RoadmapTree({ roadmap, resource }: { roadmap: Roadmap; resource: Resour
       </ul>
     </div>
     <div className="space-y-8">
-      {roadmap.sections.map((section, index) => <section key={section.id} aria-labelledby={`bloco-${section.id}`} className="space-y-3">
-        <h2 id={`bloco-${section.id}`} className="flex items-baseline gap-3 text-xl font-semibold tracking-tight"><span aria-hidden="true" className="text-muted-foreground">{index + 1}</span><span className="min-w-0 break-words">{section.title}</span></h2>
+      {roadmap.sections.map((section, index) => <section key={section.id} aria-labelledby={`${uid}-bloco-${section.id}`} className="space-y-3">
+        <h2 id={`${uid}-bloco-${section.id}`} className="flex items-baseline gap-3 text-xl font-semibold tracking-tight"><span aria-hidden="true" className="text-muted-foreground">{index + 1}</span><span className="min-w-0 break-words">{section.title}</span></h2>
         <ol className="space-y-2">
           {groupSteps(section.steps).map(group => {
             const steps = group.steps.map(step => <Step key={step.id} step={step} open={open.has(step.id)} onOpenChange={value => toggle(step.id, value)} />);
@@ -118,10 +126,15 @@ function RoadmapTree({ roadmap, resource }: { roadmap: Roadmap; resource: Resour
         </ol>
       </section>)}
     </div>
-  </div>;
+  </div></AnchorsContext.Provider>;
 }
 
-export function RoadmapView({ resource }: { resource: Resource }) {
+// `tree` shows a draft instead of the published tree, as the editor preview does.
+export function RoadmapView({ resource, tree }: { resource: Resource; tree?: Roadmap }) {
+  return tree ? <RoadmapTree roadmap={tree} resource={resource} anchors={false} /> : <PublishedRoadmap resource={resource} />;
+}
+
+function PublishedRoadmap({ resource }: { resource: Resource }) {
   const [roadmap, setRoadmap] = useState<Roadmap | undefined>(() => cachedRoadmap(resource.slug));
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);

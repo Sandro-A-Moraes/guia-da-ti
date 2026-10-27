@@ -17,6 +17,7 @@ import { checkContributionWizard } from './contribution-wizard-ui.mjs';
 import { checkContributionImages } from './contribution-images-ui.mjs';
 import { installDiscussionFixtures, checkDiscussions } from './discussions-ui.mjs';
 import { checkLazyLoadFailure } from './lazy-load-ui.mjs';
+import { installRoadmapFixtures, checkRoadmapEditor } from './roadmap-editor-ui.mjs';
 
 const profile = await mkdtemp(join(tmpdir(), 'guia-ui-'));
 const chrome = process.env.CHROME_PATH || (process.platform === 'win32' ? 'C:/Program Files/Google/Chrome/Application/chrome.exe' : 'google-chrome');
@@ -70,11 +71,15 @@ try {
   await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
   await installDiscussionFixtures(send);
   await installStudyFixtures(send,catalog);
+  await installRoadmapFixtures(send);
+  // UI_ONLY=roadmap-editor runs this check alone, for example against `vite preview`.
+  if (process.env.UI_ONLY === 'roadmap-editor') { await checkRoadmapEditor({catalog,send,evaluate,waitFor,navigate,click,selectOption,key,sleep}); socket.close(); processHandle.kill(); process.exit(0); }
   await checkStudy({send,evaluate,waitFor,navigate,click,selectOption});
   await checkStudyCuration({catalog,send,evaluate,waitFor,navigate,click});
   await checkUniversityFilter({catalog,send,evaluate,waitFor,navigate,click,selectOption});
   await checkContributionWizard({send,evaluate,waitFor,navigate,click,selectOption,sleep});
   await checkContributionImages({send,evaluate,waitFor,navigate,click,selectOption});
+  await checkRoadmapEditor({catalog,send,evaluate,waitFor,navigate,click,selectOption,key,sleep});
   await checkScrollbarLayout({send,evaluate,waitFor,navigate,click,key});
   await checkCreatorCategories({send, evaluate, waitFor, navigate, click, selectOption});
   await checkYouTubeCuration({selectOption,send, evaluate, waitFor, navigate, click, selectOption});
