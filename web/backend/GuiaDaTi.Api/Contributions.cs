@@ -16,7 +16,7 @@ public sealed class ContributionService(IHttpClientFactory clients, IConfigurati
     {
         var slug = Slug(proposal.Name);
         var resource = Validate(proposal, catalog, slug);
-        if (catalog.Resources.Any(r => r.Slug == slug && r.Type == proposal.Type || SameUrl(r.Url, resource.Url)))
+        if (catalog.Resources.Any(r => r.Slug == slug && r.Type == proposal.Type || r.Url is not null && SameUrl(r.Url, resource.Url)))
             throw new ContributionRejectedException("Esse recurso ou link já existe no catálogo.");
         return new(await new CatalogProposalWriter(clients, configuration, images).Publish(token, resource, cancellation));
     }
@@ -55,7 +55,7 @@ public sealed class ContributionService(IHttpClientFactory clients, IConfigurati
         catch (Exception error) when (error is FormatException or JsonException) { throw new ContributionRejectedException("Os dados da sugestão estão inválidos."); }
         if (resource is null) throw new ContributionRejectedException("Os dados da sugestão estão inválidos.");
         resource = Validate(resource.ToDraft(), catalog, resource.Slug) with { DiscussionNumber = number };
-        if (catalog.Resources.Any(r => r.Slug == resource.Slug && r.Type == resource.Type || SameUrl(r.Url, resource.Url)))
+        if (catalog.Resources.Any(r => r.Slug == resource.Slug && r.Type == resource.Type || r.Url is not null && SameUrl(r.Url, resource.Url)))
             throw new ContributionRejectedException("Esse recurso ou link já existe no catálogo.");
 
         var api = new Uri("https://api.github.com/");

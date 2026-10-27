@@ -17,7 +17,7 @@ public sealed class StudyEngagement(IConfiguration configuration, IHostEnvironme
     public Resource? Find(string type, string slug) => Types.Contains(type) ? catalog.Resources.FirstOrDefault(r => r.Type == type && r.Slug == slug) : null;
     public static string Key(Resource r) => r.Type + "/" + r.Slug;
     public static string TopicTitle(Resource r) => r.Name;
-    public static string TopicBody(Resource r) => $"### {r.Name}\n\n{r.Summary}\n\n{r.Description}\n\n**Link:** {r.Url}\n\n**Idiomas:** {string.Join(", ", r.Languages)}";
+    public static string TopicBody(Resource r) => $"### {r.Name}\n\n{r.Summary}\n\n{r.Description}\n\n{(r.Url is null ? "" : $"**Link:** {r.Url}\n\n")}**Idiomas:** {string.Join(", ", r.Languages)}";
 
     public async Task<StudySummary[]> ListAsync(string? userId, CancellationToken cancellation)
     {
@@ -135,7 +135,7 @@ public sealed class StudyEngagement(IConfiguration configuration, IHostEnvironme
                     if (entry.Discussion is null) {
                         foreach (var candidate in found.Items.Where(d => d.Title == TopicTitle(resource) || d.Title == $"[Sugestão] {resource.Name}")) {
                             var topic = await reader.ThreadAsync(candidate.Number, null, cancellation);
-                            if (topic?.Body.Contains(resource.Url, StringComparison.OrdinalIgnoreCase) == true) { entry.Discussion = candidate.Number; break; }
+                            if (resource.Url is not null && topic?.Body.Contains(resource.Url, StringComparison.OrdinalIgnoreCase) == true) { entry.Discussion = candidate.Number; break; }
                         }
                     }
                     cursor = found.PageInfo.HasNextPage ? found.PageInfo.EndCursor : null;

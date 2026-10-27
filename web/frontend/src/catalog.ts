@@ -2,9 +2,12 @@ import { FORUM_ENABLED } from './features';
 import snapshot from './generated/catalog.json';
 import navigation from './navigation.json';
 import type { CommunityLocation } from './community-location';
+export type RoadmapLevel = 'beginner' | 'intermediate' | 'advanced';
+// The step tree lives in roadmap-data.ts; the snapshot only keeps this summary.
+export type RoadmapSummary = { level: RoadmapLevel; sectionCount: number; stepCount: number };
 export type Resource = {
   slug: string; type: string; name: string; summary: string; description: string;
-  url: string; imageUrl?: string; discussionNumber?: number; areas: string[]; technologies: string[]; languages: string[]; universityType?: "public" | "private"; countries?: string[]; creatorCategories?: string[]; communityLocation?: CommunityLocation; communityPlatforms?: string[]; communityModality?: string; communityAudience?: string; communityLinks?: {platform:string;url:string}[]; communityMembers?:{count:number;moreThan?:boolean;checkedAt:string}; updatedAt: string; demo?: boolean;
+  url?: string; roadmap?: RoadmapSummary; imageUrl?: string; discussionNumber?: number; areas: string[]; technologies: string[]; languages: string[]; universityType?: "public" | "private"; countries?: string[]; creatorCategories?: string[]; communityLocation?: CommunityLocation; communityPlatforms?: string[]; communityModality?: string; communityAudience?: string; communityLinks?: {platform:string;url:string}[]; communityMembers?:{count:number;moreThan?:boolean;checkedAt:string}; updatedAt: string; demo?: boolean;
 };
 export const resources = snapshot.resources as Resource[];
 export const taxonomy = snapshot.taxonomy;

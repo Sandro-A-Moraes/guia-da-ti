@@ -67,7 +67,7 @@ function resourceExtra(resource: Resource) {
       location?.scope === 'regional' ? location.states?.join(' · ') || '' : 'Localização não informada';
   }
   if (profileTypes.has(resource.type)) {
-    try { return new URL(resource.url).hostname.replace(/^www\./, ''); } catch { return 'Perfil externo'; }
+    try { return new URL(resource.url ?? '').hostname.replace(/^www\./, ''); } catch { return 'Perfil externo'; }
   }
   if (['jobs', 'scholarships', 'events', 'meetups', 'conferences', 'hackathons'].includes(resource.type)) {
     return resource.countries?.length ? resource.countries.map(country => labels[country] || country).join(' · ') : resource.areas.map(area => labels[area] || area).join(' · ');
@@ -101,15 +101,15 @@ function ResourceRow({ resource, platform, locationColumn = false, sponsored = f
   const [open, setOpen] = useState(false);
   const extra = resourceExtra(resource);
   const profile = profileTypes.has(resource.type);
-  const { profile: creator, loading: profileLoading } = useCreatorProfile(resource.url, profile && !resource.demo, 0);
+  const { profile: creator, loading: profileLoading } = useCreatorProfile(resource.url ?? '', profile && !resource.demo, 0);
   const displayName = creator?.name || resource.name;
   const displaySummary = creator?.description || resource.summary;
   const imageUrl = resourceImage(resource) || creator?.avatarUrl || undefined;
   const communityImageUrl = resource.type === 'communities' && !imageUrl
-    ? `https://www.google.com/s2/favicons?domain_url=${encodeURIComponent(resource.url)}&sz=128`
+    ? `https://www.google.com/s2/favicons?domain_url=${encodeURIComponent(resource.url ?? '')}&sz=128`
     : undefined;
   const dialog = dialogTypes.has(resource.type);
-  const href = profile ? resource.url : resourcePath(resource);
+  const href = profile && resource.url ? resource.url : resourcePath(resource);
   const category = profile ? resource.creatorCategories?.map(id => creatorCategoryLabels[id] || id).join(' · ') || 'Categoria não informada' : categories.find(item => item.id === resource.type)?.name || resource.type;
   const titleClass = 'block max-w-full truncate rounded-sm text-left text-[13px] font-medium leading-5 hover:text-primary focus-visible:outline-2 focus-visible:outline-ring';
   const title: ReactNode = dialog
@@ -220,7 +220,7 @@ export function App({ path }: { path: string }) {
     (!communitiesPage || matchesCommunityFilters(r, communitySelection)) &&
     (!page.category || r.type === page.category.id || (page.category.id === 'creators' && r.type === 'youtube')) &&
     (!platform || (platform === 'youtube' && r.type === 'youtube') || (creatorNetworks.find(network => network.id === platform)?.domains || []).some(domain => {
-      try { const host = new URL(r.url).hostname.toLowerCase(); return host === domain || host.endsWith(`.${domain}`); }
+      try { const host = new URL(r.url ?? '').hostname.toLowerCase(); return host === domain || host.endsWith(`.${domain}`); }
       catch { return false; }
     })) &&
     (!page.area || r.areas.includes(page.area)) &&
@@ -356,7 +356,7 @@ export function App({ path }: { path: string }) {
             <aside aria-label="Informações e links do recurso" className="flex flex-col gap-4 rounded-lg bg-muted/30 p-4 lg:flex-row lg:items-center lg:justify-between">
             <dl className="grid grid-cols-2 gap-3 text-sm lg:min-w-56"><div className="space-y-1"><dt className="text-xs text-muted-foreground">Idiomas</dt><dd>{page.resource.languages.join(', ') || 'Não informado'}</dd></div><div className="space-y-1"><dt className="text-xs text-muted-foreground">Última atualização</dt><dd>{page.resource.updatedAt.split('-').reverse().join('/')}</dd></div></dl>
             <p className="text-xs leading-relaxed text-muted-foreground lg:max-w-56">O conteúdo e as informações completas ficam no site de origem.</p>
-            <div className="flex flex-wrap gap-2"><Button asChild><a href={page.resource.url} target="_blank" rel="noopener noreferrer">Abrir site<ArrowUpRight /></a></Button>{repository && <Button asChild variant="outline"><a href={`${repository}/edit/main/data/${page.resource.type}/${page.resource.slug}.json`}>Editar informação</a></Button>}</div>
+            <div className="flex flex-wrap gap-2">{page.resource.url && <Button asChild><a href={page.resource.url} target="_blank" rel="noopener noreferrer">Abrir site<ArrowUpRight /></a></Button>}{repository && <Button asChild variant="outline"><a href={`${repository}/edit/main/data/${page.resource.type}/${page.resource.slug}.json`}>Editar informação</a></Button>}</div>
             </aside>
             </div>
             </section>

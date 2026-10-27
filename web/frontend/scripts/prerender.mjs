@@ -1,10 +1,11 @@
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
-import { render, routes, pageInfo } from '../dist/server/entry-server.js';
+import { render, routes, pageInfo, preloadRoadmap } from '../dist/server/entry-server.js';
 const template = await readFile('dist/index.html', 'utf8');
 const origin = new URL(process.env.SITE_URL || 'https://guiadati.com').origin;
 const escape = value => value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 for (const path of [...routes, '/empresas', '/admin/anuncios', '/404']) {
+  await preloadRoadmap(path);
   const page = pageInfo(path), title = escape(`${page.title} | Guia da TI`), description = escape(page.description), url = escape(origin + path);
   const seo = `<meta name="description" content="${description}"><link rel="canonical" href="${url}"><meta property="og:title" content="${title}"><meta property="og:description" content="${description}"><meta property="og:url" content="${url}"><meta property="og:type" content="website">${path === '/404' ? '<meta name="robots" content="noindex">' : ''}`;
   const html = template.replace('<title>Guia da TI</title>', `<title>${title}</title>`).replace('<!--seo-->', seo + (['/empresas', '/admin/anuncios'].includes(path) ? '<meta name="robots" content="noindex, nofollow">' : '')).replace('<!--app-->', () => render(path));

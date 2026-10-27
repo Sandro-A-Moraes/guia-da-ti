@@ -101,7 +101,7 @@ export function ResourcePreview({ resource, extra = '', children, disabled = fal
       >
         {image && <LoadingImage src={image} alt="" loading="eager" className="h-36 w-full rounded-t-lg border-b bg-muted/40" imageClassName="object-contain p-3" />}
         <div className="p-4">
-          <div className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground"><Globe2 className="size-4" />{new URL(resource.url).hostname.replace(/^www\./, '')}</div>
+          {resource.url && <div className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground"><Globe2 className="size-4" />{new URL(resource.url).hostname.replace(/^www\./, '')}</div>}
           <p className="text-base font-semibold">{resource.name}</p>
           <p className="mt-1 text-sm leading-relaxed">{resource.description}</p>
           {extra && <p className="mt-3 border-t pt-2 text-xs text-muted-foreground">{extra}</p>}

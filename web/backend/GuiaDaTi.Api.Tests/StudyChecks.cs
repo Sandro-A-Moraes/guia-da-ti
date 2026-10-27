@@ -43,7 +43,7 @@ static class StudyChecks
                 try {await restarted.VoteAsync(resource,"1",vote,default);throw new Exception("Invalid vote accepted");}catch(ArgumentException){}
             }
             var first=await activity.CommentAsync(resource,"visitor-token","Primeira experiência",default);
-            Assert(handler.TopicBody.Contains(resource.Url) && handler.TopicBody.Contains(resource.Description) && !handler.TopicBody.Contains("Primeira experiência"),"Resource opens the topic and first visitor message stays a comment");
+            Assert(handler.TopicBody.Contains(resource.Url!) && handler.TopicBody.Contains(resource.Description) && !handler.TopicBody.Contains("Primeira experiência"),"Resource opens the topic and first visitor message stays a comment");
             var second=await restarted.CommentAsync(resource,"visitor-token","Outra experiência",default);
             Assert(first==7 && second==7 && handler.Topics==1 && handler.Comments==2 && handler.VisitorOnly,"Comments reuse one resource topic and visitor credentials");
             var linkedResources=await activity.LinkedResourcesAsync([first],default);

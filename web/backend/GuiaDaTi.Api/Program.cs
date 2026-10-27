@@ -105,5 +105,5 @@ static string Normalize(string value) => string.Concat(value.Normalize(Normaliza
 
 public record Catalog(int Version, Taxonomy Taxonomy, Resource[] Resources);
 public record Taxonomy(string[] Areas, string[] Technologies, string[] Languages, string[] Types);
-public record Resource(string Slug, string Type, string Name, string Summary, string Description, string Url,
+public record Resource(string Slug, string Type, string Name, string Summary, string Description, string? Url,
     string[] Areas, string[] Technologies, string[] Languages, string UpdatedAt, bool Demo, string[]? Countries = null, CommunityLocation? CommunityLocation = null, string[]? CommunityPlatforms = null, string? CommunityModality = null, string[]? CreatorCategories = null, string? CommunityAudience = null, CommunityLink[]? CommunityLinks = null, CommunityMembers? CommunityMembers = null, string? UniversityType = null, string? ImageUrl = null, int? DiscussionNumber = null);
