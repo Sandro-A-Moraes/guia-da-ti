@@ -20,7 +20,8 @@
 
 ## Fase 3 — completar o MVP
 
-- [ ] Schemas e apresentação específicos para cursos, roadmaps, criadores e YouTube.
+- [x] Schema, validação, trilha, editor e fluxo de PR para roadmaps da comunidade.
+- [ ] Schemas e apresentação específicos para cursos, criadores e YouTube.
 - [ ] Filtros avançados e dados estruturados por categoria.
 - [x] Verificação visual mobile/desktop, dropdowns, busca, seleção de categoria, tema escuro e navegação por teclado no Chrome.
 - [ ] Testes de integração HTTP, SEO e mapa.

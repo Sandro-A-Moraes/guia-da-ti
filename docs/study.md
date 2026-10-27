@@ -2,6 +2,8 @@
 
 As categorias de cursos, plataformas, faculdades, bootcamps, roadmaps, livros e certificações usam cards (quatro colunas no desktop) ou lista. Pesquisa, ordenação e paginação se combinam. A URL preserva `q`, `ordem`, `visualizacao` e `pagina`.
 
+Em **Roadmaps**, cada item mostra o selo **Comunidade do Guia** ou **Fonte externa**. Os roadmaps da comunidade também mostram a linha "N etapas · Nível". O filtro **Origem** oferece **Todas as origens**, **Comunidade do Guia** e **Fonte externa**. Ele aparece no endereço como `?origem=comunidade` ou `?origem=externa` e volta à primeira página quando você muda a seleção. Um roadmap da comunidade abre uma página do Guia com a trilha. Um roadmap externo leva ao site de origem. Veja [Roadmaps da comunidade](roadmaps-comunidade.md).
+
 Cards e linhas usam o mesmo destaque ao passar o mouse que a listagem de criadores. Clique em qualquer área do item para abrir os detalhes. Os links também funcionam pelo teclado e permitem abrir uma nova aba.
 
 Em **Faculdades**, o filtro **Tipo de instituição** oferece **Todas as instituições**, **Pública** e **Privada**, ao lado da pesquisa. Ele funciona com a pesquisa e a ordenação, aparece no endereço da página e volta à primeira página quando você muda a seleção. A sugestão de faculdade exige essa informação. O catálogo guarda a classificação em `universityType`, com os valores `public` e `private`.
