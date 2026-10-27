@@ -7,9 +7,12 @@ public sealed class ContributionNotifications(TimeProvider clock)
     private long cursor;
 
     public ContributionNotice Publish(string login, ContributionDraft draft, ContributionResult result)
+        => Publish(login, draft.Name, draft.Type, result);
+
+    public ContributionNotice Publish(string login, string name, string type, ContributionResult result)
     {
         lock (gate) {
-            var notice = new ContributionNotice($"{stream}:{++cursor}", login, draft.Name.Trim(), draft.Type,
+            var notice = new ContributionNotice($"{stream}:{++cursor}", login, name.Trim(), type,
                 result.Url);
             events.Enqueue((cursor, clock.GetUtcNow(), notice));
             while (events.Count > 100) events.Dequeue();

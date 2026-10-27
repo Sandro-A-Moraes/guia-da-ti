@@ -18,6 +18,8 @@ builder.Services.AddSingleton<DiscussionWriter>();
 builder.Services.AddSingleton<ContributionService>();
 builder.Services.AddSingleton<ContributionImages>();
 builder.Services.AddSingleton<ContributionNotifications>();
+builder.Services.AddSingleton<RoadmapContributors>();
+builder.Services.AddSingleton<RoadmapProposals>();
 builder.Services.AddSingleton<ContributorsClient>();
 builder.Logging.AddFilter("System.Net.Http.HttpClient.creator-profiles", LogLevel.None);
 // Request logs include the query string, such as the OAuth callback code and state.
@@ -68,6 +70,7 @@ app.MapDiscussionWrites();
 app.MapDiscussions();
 app.MapContributions();
 app.MapContributionImages();
+app.MapRoadmaps();
 app.MapContributionNotifications();
 app.MapContributors();
 app.MapCreatorProfiles();
@@ -106,4 +109,6 @@ static string Normalize(string value) => string.Concat(value.Normalize(Normaliza
 public record Catalog(int Version, Taxonomy Taxonomy, Resource[] Resources);
 public record Taxonomy(string[] Areas, string[] Technologies, string[] Languages, string[] Types);
 public record Resource(string Slug, string Type, string Name, string Summary, string Description, string? Url,
-    string[] Areas, string[] Technologies, string[] Languages, string UpdatedAt, bool Demo, string[]? Countries = null, CommunityLocation? CommunityLocation = null, string[]? CommunityPlatforms = null, string? CommunityModality = null, string[]? CreatorCategories = null, string? CommunityAudience = null, CommunityLink[]? CommunityLinks = null, CommunityMembers? CommunityMembers = null, string? UniversityType = null, string? ImageUrl = null, int? DiscussionNumber = null);
+    string[] Areas, string[] Technologies, string[] Languages, string UpdatedAt, bool Demo, string[]? Countries = null, CommunityLocation? CommunityLocation = null, string[]? CommunityPlatforms = null, string? CommunityModality = null, string[]? CreatorCategories = null, string? CommunityAudience = null, CommunityLink[]? CommunityLinks = null, CommunityMembers? CommunityMembers = null, string? UniversityType = null, string? ImageUrl = null, int? DiscussionNumber = null, RoadmapSummaryData? Roadmap = null);
+// Only the level is read from the snapshot. It marks a roadmap written by the community.
+public record RoadmapSummaryData(string Level);

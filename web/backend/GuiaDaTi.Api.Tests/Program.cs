@@ -76,7 +76,9 @@ await AdvertisingChecks.Run();
 await CreatorProfileChecks.Run();
 CommunityLocationChecks.Run();
 await CatalogProposalChecks.Run();
+await RoadmapProposalChecks.Run();
 CatalogJsonChecks.Run();
+RoadmapRulesChecks.Run();
 ContributionNoticeChecks.Run();
 Console.WriteLine("Discussions OK: filtering, cursors, cache, thread, replies, moderation, public-only data, errors and configuration.");
 

@@ -16,7 +16,7 @@ public sealed class ContributionService(IHttpClientFactory clients, IConfigurati
     {
         var slug = Slug(proposal.Name);
         var resource = Validate(proposal, catalog, slug);
-        if (catalog.Resources.Any(r => r.Slug == slug && r.Type == proposal.Type || r.Url is not null && SameUrl(r.Url, resource.Url)))
+        if (catalog.Resources.Any(r => r.Slug == slug && r.Type == proposal.Type || r.Url is not null && SameUrl(r.Url, resource.Url!)))
             throw new ContributionRejectedException("Esse recurso ou link já existe no catálogo.");
         return new(await new CatalogProposalWriter(clients, configuration, images).Publish(token, resource, cancellation));
     }
@@ -55,7 +55,7 @@ public sealed class ContributionService(IHttpClientFactory clients, IConfigurati
         catch (Exception error) when (error is FormatException or JsonException) { throw new ContributionRejectedException("Os dados da sugestão estão inválidos."); }
         if (resource is null) throw new ContributionRejectedException("Os dados da sugestão estão inválidos.");
         resource = Validate(resource.ToDraft(), catalog, resource.Slug) with { DiscussionNumber = number };
-        if (catalog.Resources.Any(r => r.Slug == resource.Slug && r.Type == resource.Type || r.Url is not null && SameUrl(r.Url, resource.Url)))
+        if (catalog.Resources.Any(r => r.Slug == resource.Slug && r.Type == resource.Type || r.Url is not null && SameUrl(r.Url, resource.Url!)))
             throw new ContributionRejectedException("Esse recurso ou link já existe no catálogo.");
 
         var api = new Uri("https://api.github.com/");
@@ -103,13 +103,11 @@ public sealed class ContributionService(IHttpClientFactory clients, IConfigurati
             || string.IsNullOrWhiteSpace(p.Description) || p.Description.Trim().Length is < 10 or > 4000
             || string.IsNullOrWhiteSpace(slug) || slug.Length > 80 || slug != Slug(p.Name) || !Regex.IsMatch(slug, @"^[a-z0-9]+(?:-[a-z0-9]+)*$"))
             throw new ContributionRejectedException("Confira a categoria, o nome, o resumo e a descrição.");
-        if (string.IsNullOrWhiteSpace(p.Url) || p.Url.Length > 500 || !Uri.TryCreate(p.Url, UriKind.Absolute, out var url)
-            || url.Scheme != "https" || !url.IsDefaultPort || !string.IsNullOrEmpty(url.UserInfo) || !url.Host.Contains('.')
-            || Regex.IsMatch(url.Host, @"(^localhost$|\.local$|\.localhost$|\.internal$|^[\d.]+$|:)", RegexOptions.IgnoreCase))
+        if (!TryPublicHttps(p.Url, out var url))
             throw new ContributionRejectedException("Informe um link público seguro começando com https://.");
         if (p.Areas is null || p.Areas.Length < 1 || p.Areas.Length > 15 || p.Areas.Any(a => !c.Taxonomy.Areas.Contains(a)) || p.Technologies is null || p.Technologies.Length > 20 || p.Technologies.Any(t => !c.Taxonomy.Technologies.Contains(t)) || p.Languages is null || p.Languages.Length < 1 || p.Languages.Length > 15 || p.Languages.Any(l => !c.Taxonomy.Languages.Contains(l)))
             throw new ContributionRejectedException("Escolha assuntos, tecnologias e idiomas disponíveis no guia.");
-        if (p.ImageUrl is { } imageUrl && (imageUrl.Length > 500 || !Uri.TryCreate(imageUrl, UriKind.Absolute, out var image) || image.Scheme != "https" || !image.IsDefaultPort || !string.IsNullOrEmpty(image.UserInfo) || !image.Host.Contains('.') || Regex.IsMatch(image.Host, @"(^localhost$|\.local$|\.localhost$|\.internal$|^[\d.]+$|:)", RegexOptions.IgnoreCase)))
+        if (p.ImageUrl is { } imageUrl && !TryPublicHttps(imageUrl, out _))
             throw new ContributionRejectedException("Informe um link público da imagem começando com https://.");
         if (p.ImageUploadId is { } imageId) {
             if (p.ImageUrl is not null || images is null) throw new ContributionRejectedException("Envie um arquivo ou um link de imagem.");
@@ -123,14 +121,23 @@ public sealed class ContributionService(IHttpClientFactory clients, IConfigurati
         CommunityLocationRules.ValidateContribution(p.Type, p.CommunityLocation, p.CommunityPlatforms, p.CommunityModality, p.CommunityAudience, p.CommunityLinks, p.CommunityMembers);
         return new(slug, p.Type, p.Name.Trim(), p.Summary.Trim(), p.Description.Trim(), url.AbsoluteUri, p.Areas.Distinct().ToArray(), p.Technologies.Distinct().ToArray(), p.Languages.Distinct().ToArray(), DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), CommunityLocation: p.CommunityLocation, CommunityPlatforms: p.CommunityPlatforms, CommunityModality: p.CommunityModality, CreatorCategories: p.CreatorCategories, CommunityAudience:p.CommunityAudience, CommunityLinks:p.CommunityLinks, CommunityMembers:p.CommunityMembers, UniversityType:p.UniversityType, ImageUrl:p.ImageUrl, ImageUploadId:p.ImageUploadId);
     }
-    private static string Slug(string value) => Regex.Replace(string.Concat((value ?? "").Normalize(NormalizationForm.FormD).Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)).ToLowerInvariant(), @"[^a-z0-9]+", "-").Trim('-');
+    internal static bool TryPublicHttps(string? value, out Uri uri)
+    {
+        uri = null!;
+        if (string.IsNullOrWhiteSpace(value) || value.Length > 500 || !Uri.TryCreate(value, UriKind.Absolute, out var parsed)
+            || parsed.Scheme != "https" || !parsed.IsDefaultPort || !string.IsNullOrEmpty(parsed.UserInfo) || !parsed.Host.Contains('.')
+            || Regex.IsMatch(parsed.Host, @"(^localhost$|\.local$|\.localhost$|\.internal$|^[\d.]+$|:)", RegexOptions.IgnoreCase)) return false;
+        uri = parsed;
+        return true;
+    }
+    internal static string Slug(string value) => Regex.Replace(string.Concat((value ?? "").Normalize(NormalizationForm.FormD).Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)).ToLowerInvariant(), @"[^a-z0-9]+", "-").Trim('-');
     private static bool SameUrl(string a, string b) { static string Key(string value) { var uri = new Uri(value); return uri.GetLeftPart(UriPartial.Path).TrimEnd('/').ToLowerInvariant(); } return Key(a) == Key(b); }
 }
 
 public record ContributionResult(string Url, ContributionNotice? Notice = null);
 
 public record ContributionDraft(string Type, string Name, string Url, string Summary, string Description, string[] Areas, string[] Technologies, string[] Languages, CommunityLocation? CommunityLocation = null, string[]? CommunityPlatforms = null, string? CommunityModality = null, string[]? CreatorCategories = null, string? CommunityAudience = null, CommunityLink[]? CommunityLinks = null, CommunityMembers? CommunityMembers = null, string? UniversityType = null, string? ImageUrl = null, string? ImageUploadId = null);
-public record ContributionResource(string Slug, string Type, string Name, string Summary, string Description, string Url, string[] Areas, string[] Technologies, string[] Languages, string UpdatedAt, bool Demo = false,
+public record ContributionResource(string Slug, string Type, string Name, string Summary, string Description, [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Url, string[] Areas, string[] Technologies, string[] Languages, string UpdatedAt, bool Demo = false,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] CommunityLocation? CommunityLocation = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string[]? CommunityPlatforms = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? CommunityModality = null,
@@ -141,8 +148,9 @@ public record ContributionResource(string Slug, string Type, string Name, string
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? UniversityType = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ImageUrl = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ImageUploadId = null,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? DiscussionNumber = null)
-{ public ContributionDraft ToDraft() => new(Type, Name, Url, Summary, Description, Areas, Technologies, Languages, CommunityLocation, CommunityPlatforms, CommunityModality, CreatorCategories, CommunityAudience, CommunityLinks, CommunityMembers, UniversityType, ImageUrl, ImageUploadId); }
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? DiscussionNumber = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] RoadmapData? Roadmap = null)
+{ public ContributionDraft ToDraft() => new(Type, Name, Url ?? "", Summary, Description, Areas, Technologies, Languages, CommunityLocation, CommunityPlatforms, CommunityModality, CreatorCategories, CommunityAudience, CommunityLinks, CommunityMembers, UniversityType, ImageUrl, ImageUploadId); }
 public sealed class ContributionRejectedException(string message) : Exception(message);
 
 public static class ContributionEndpoints
