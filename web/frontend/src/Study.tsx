@@ -24,6 +24,8 @@ import { ResourceSearch } from "./ResourceSearch";
 import { ResourcePagination } from "./ResourcePagination";
 import imageSources from "./assets/study/sources.json";
 import { universityTypes } from "./university-options";
+import { filterByOrigin, originQueryValue, readOrigin, roadmapOrigin, roadmapOriginLabels, type OriginFilter } from "./roadmap-origin";
+import { roadmapLevels } from "./roadmap-view";
 import { LoadingImage } from "./LoadingImage";
 import { resourceImage } from './resource-image';
 import { ResourcePreview } from './ResourcePreview';
@@ -154,6 +156,7 @@ export function StudyListing({
   const [view, setView] = useState("cards");
   const [page, setPage] = useState(1);
   const [institution, setInstitution] = useState("all");
+  const [origin, setOrigin] = useState<OriginFilter>("all");
   useEffect(() => {
     const read = () => {
       const params = new URLSearchParams(window.location.search);
@@ -165,6 +168,7 @@ export function StudyListing({
           ? institution!
           : "all",
       );
+      setOrigin(category === "roadmaps" ? readOrigin(window.location.search) : "all");
       setSort(
         sort && Object.hasOwn(studySorts, sort) ? (sort as StudySort) : "hypes",
       );
@@ -181,7 +185,7 @@ export function StudyListing({
   function update(key: string, value: string, reset = true) {
     const url = new URL(window.location.href);
     url.searchParams.set(key, value);
-    if (key === "instituicao" && value === "all") url.searchParams.delete(key);
+    if ((key === "instituicao" || key === "origem") && (value === "all" || value === "")) url.searchParams.delete(key);
     if (reset) {
       url.searchParams.delete("pagina");
       setPage(1);
@@ -191,7 +195,9 @@ export function StudyListing({
   const filteredItems =
     category === "universities" && institution !== "all"
       ? items.filter((r) => r.universityType === institution)
-      : items;
+      : category === "roadmaps"
+        ? filterByOrigin(items, origin)
+        : items;
   const listing = paginate(pinSponsored(rankStudy(filteredItems, activity, sort), "studying"), page);
   const changePage = (next: number) => {
     setPage(next);
@@ -213,10 +219,20 @@ export function StudyListing({
             {universityTypes.find((t) => t.id === r.universityType)?.name}
           </Badge>
         )}
+        {category === "roadmaps" && (
+          <Badge variant={roadmapOrigin(r) === "community" ? "secondary" : "outline"}>
+            {roadmapOriginLabels[roadmapOrigin(r)]}
+          </Badge>
+        )}
       </div>
       <p className="my-2 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
         {r.summary}
       </p>
+      {r.roadmap && (
+        <p className="mb-2 text-[11px] text-muted-foreground">
+          {r.roadmap.stepCount} {r.roadmap.stepCount === 1 ? "etapa" : "etapas"} · {roadmapLevels[r.roadmap.level]}
+        </p>
+      )}
       {showActivity && <StudyBadges activity={activity[studyKey(r)]} />}
     </>
   );
@@ -276,6 +292,29 @@ export function StudyListing({
               </SelectContent>
             </Select>
           )}
+          {category === "roadmaps" && (
+            <Select
+              value={origin === "all" ? "all" : origin}
+              onValueChange={(value) => {
+                const next = value as OriginFilter;
+                setOrigin(next);
+                update("origem", originQueryValue(next));
+              }}
+            >
+              <SelectTrigger
+                aria-label="Origem do roadmap"
+                size="sm"
+                className="h-8 w-44 text-xs"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as origens</SelectItem>
+                <SelectItem value="community">{roadmapOriginLabels.community}</SelectItem>
+                <SelectItem value="external">{roadmapOriginLabels.external}</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
           <ResourceSearch value={query} onChange={onSearch} />
           <div
             role="group"
@@ -324,8 +363,12 @@ export function StudyListing({
       )}
       {filteredItems.length === 0 ? (
         <p className="rounded-lg border p-6 text-sm text-muted-foreground">
-          {query || institution !== "all"
-            ? "Nenhum resultado para esta pesquisa."
+          {query || institution !== "all" || origin !== "all"
+            ? origin !== "all" && !query
+              ? origin === "community"
+                ? "Ainda não há roadmaps da comunidade. Sugira o primeiro."
+                : "Ainda não há roadmaps de fontes externas."
+              : "Nenhum resultado para esta pesquisa."
             : "Ainda não há itens nesta categoria. Sugira o primeiro."}
         </p>
       ) : view === "cards" ? (

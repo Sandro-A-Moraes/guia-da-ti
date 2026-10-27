@@ -8,6 +8,8 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Discussions } from './Discussions';
 import { StudyCover, StudyDetail, StudyListing } from './Study';
 import { studyTypes } from './study-ranking';
+import { RoadmapView } from './RoadmapView';
+import { RoadmapContributors } from './RoadmapContributors';
 import { ResourcePreview } from './ResourcePreview';
 import { resourceImage } from './resource-image';
 import { shouldOpenRow, openRowLink } from './row-navigation';
@@ -353,11 +355,20 @@ export function App({ path }: { path: string }) {
             {!!page.resource.technologies.length && <div className="flex flex-wrap gap-2">{page.resource.technologies.map(t => <Badge asChild variant="secondary" key={t}><a href={`/tecnologias/${t}`}>{labels[t] || t}</a></Badge>)}</div>}
             {page.resource.type==='communities' && <div className="space-y-3"><p className="text-sm text-muted-foreground">{resourceExtra(page.resource)}{page.resource.communityAudience ? ` · Público: ${communityAudiences.find(item=>item.id===page.resource!.communityAudience)?.name}` : ''}</p><div className="flex flex-wrap gap-2">{page.resource.communityLinks?.map(link=><Button asChild variant="outline" key={link.platform}><a href={link.url} target="_blank" rel="noopener noreferrer">{communityPlatforms.find(item=>item.id===link.platform)?.name}<ArrowUpRight /></a></Button>)}</div></div>}
             </div>
+            {page.resource.roadmap ? <>
+            <RoadmapView resource={page.resource} />
+            <RoadmapContributors slug={page.resource.slug} />
+            <aside aria-label="Informações do roadmap" className="flex flex-col gap-3 rounded-lg bg-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <dl className="grid grid-cols-2 gap-3 text-sm sm:min-w-56"><div className="space-y-1"><dt className="text-xs text-muted-foreground">Idiomas</dt><dd>{page.resource.languages.join(', ') || 'Não informado'}</dd></div><div className="space-y-1"><dt className="text-xs text-muted-foreground">Última atualização</dt><dd>{page.resource.updatedAt.split('-').reverse().join('/')}</dd></div></dl>
+            {repository && <Button asChild variant="outline"><a href={`${repository}/commits/main/data/roadmaps/${page.resource.slug}.json`} target="_blank" rel="noopener noreferrer">Ver histórico<ArrowUpRight /></a></Button>}
+            </aside>
+            </> : (
             <aside aria-label="Informações e links do recurso" className="flex flex-col gap-4 rounded-lg bg-muted/30 p-4 lg:flex-row lg:items-center lg:justify-between">
             <dl className="grid grid-cols-2 gap-3 text-sm lg:min-w-56"><div className="space-y-1"><dt className="text-xs text-muted-foreground">Idiomas</dt><dd>{page.resource.languages.join(', ') || 'Não informado'}</dd></div><div className="space-y-1"><dt className="text-xs text-muted-foreground">Última atualização</dt><dd>{page.resource.updatedAt.split('-').reverse().join('/')}</dd></div></dl>
             <p className="text-xs leading-relaxed text-muted-foreground lg:max-w-56">O conteúdo e as informações completas ficam no site de origem.</p>
             <div className="flex flex-wrap gap-2">{page.resource.url && <Button asChild><a href={page.resource.url} target="_blank" rel="noopener noreferrer">Abrir site<ArrowUpRight /></a></Button>}{repository && <Button asChild variant="outline"><a href={`${repository}/edit/main/data/${page.resource.type}/${page.resource.slug}.json`}>Editar informação</a></Button>}</div>
             </aside>
+            )}
             </div>
             </section>
             {studyTypes.has(page.resource.type) && <StudyDetail resource={page.resource} />}
