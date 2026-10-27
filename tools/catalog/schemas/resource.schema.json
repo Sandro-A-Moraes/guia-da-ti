@@ -8,7 +8,6 @@
     "name",
     "summary",
     "description",
-    "url",
     "areas",
     "technologies",
     "languages",
@@ -275,9 +274,116 @@
     "universityType": {
       "type": "string",
       "enum": ["public", "private"]
+    },
+    "roadmap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["level", "sections"],
+      "properties": {
+        "level": {
+          "enum": ["beginner", "intermediate", "advanced"]
+        },
+        "sections": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 20,
+          "items": { "$ref": "#/definitions/roadmapSection" }
+        }
+      }
     }
   },
   "definitions": {
+    "roadmapId": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "maxLength": 40
+    },
+    "roadmapSection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "steps"],
+      "properties": {
+        "id": { "$ref": "#/definitions/roadmapId" },
+        "title": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 150,
+          "items": { "$ref": "#/definitions/roadmapStep" }
+        }
+      }
+    },
+    "roadmapStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "importance"],
+      "properties": {
+        "id": { "$ref": "#/definitions/roadmapId" },
+        "title": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "description": { "type": "string", "minLength": 1, "maxLength": 400 },
+        "importance": { "enum": ["essential", "recommended", "optional"] },
+        "choice": { "$ref": "#/definitions/roadmapId" },
+        "resources": { "$ref": "#/definitions/roadmapResources" },
+        "links": { "$ref": "#/definitions/roadmapLinks" },
+        "children": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "items": { "$ref": "#/definitions/roadmapSubstep" }
+        }
+      }
+    },
+    "roadmapSubstep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "importance"],
+      "properties": {
+        "id": { "$ref": "#/definitions/roadmapId" },
+        "title": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "description": { "type": "string", "minLength": 1, "maxLength": 400 },
+        "importance": { "enum": ["essential", "recommended", "optional"] },
+        "resources": { "$ref": "#/definitions/roadmapResources" },
+        "links": { "$ref": "#/definitions/roadmapLinks" }
+      }
+    },
+    "roadmapResources": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "slug"],
+        "properties": {
+          "type": { "type": "string", "maxLength": 40 },
+          "slug": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "maxLength": 80
+          }
+        }
+      }
+    },
+    "roadmapLinks": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title", "url"],
+        "properties": {
+          "title": { "type": "string", "minLength": 2, "maxLength": 80 },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 500,
+            "pattern": "^https://"
+          }
+        }
+      }
+    },
     "ids": {
       "type": "array",
       "minItems": 1,
@@ -299,6 +405,24 @@
     }
   },
   "allOf": [
+    {
+      "if": {
+        "required": ["roadmap"]
+      },
+      "then": {
+        "properties": {
+          "type": {
+            "const": "roadmaps"
+          }
+        },
+        "not": {
+          "required": ["url"]
+        }
+      },
+      "else": {
+        "required": ["url"]
+      }
+    },
     {
       "if": {
         "anyOf": [
